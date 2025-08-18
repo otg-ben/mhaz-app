@@ -1,0 +1,218 @@
+'use client';
+
+import { useState } from 'react';
+
+type AlertType = 'Trail' | 'LEO' | 'Citation';
+type AlertStatus = 'Active' | 'Resolved';
+
+interface Alert {
+  id: string;
+  type: AlertType;
+  status?: AlertStatus;
+  category: string;
+  location: string;
+  description: string;
+  reportedBy: string;
+  reportedAt: Date;
+}
+
+const mockAlerts: Alert[] = [
+  {
+    id: '1',
+    type: 'Trail',
+    status: 'Active',
+    category: 'Downed Tree',
+    location: 'Main trail near mile marker 3.2',
+    description: 'Large oak tree blocking the main trail near mile marker 3.2',
+    reportedBy: 'TrailMaintainer',
+    reportedAt: new Date(Date.now() - 1 * 60 * 60 * 1000)
+  },
+  {
+    id: '2',
+    type: 'Trail',
+    status: 'Active',
+    category: 'Washout',
+    location: 'Trail washed out after recent rains',
+    description: 'Trail washed out after recent rains, impassable for bikes',
+    reportedBy: 'WeatherWatcher',
+    reportedAt: new Date(Date.now() - 6 * 60 * 60 * 1000)
+  },
+  {
+    id: '3',
+    type: 'LEO',
+    category: 'Law Enforcement',
+    location: 'Parking Area A',
+    description: 'Increased patrol presence in parking areas',
+    reportedBy: 'ParkRanger',
+    reportedAt: new Date(Date.now() - 2 * 60 * 60 * 1000)
+  },
+  {
+    id: '4',
+    type: 'Citation',
+    category: 'Parking Violation',
+    location: 'Trailhead B',
+    description: 'Vehicle cited for parking in no-parking zone',
+    reportedBy: 'ParkOfficer',
+    reportedAt: new Date(Date.now() - 4 * 60 * 60 * 1000)
+  }
+];
+
+function getTimeAgo(date: Date): string {
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+  
+  if (diffHours < 24) {
+    return `about ${diffHours} hour${diffHours !== 1 ? 's' : ''} ago`;
+  } else {
+    return date.toLocaleDateString();
+  }
+}
+
+export default function FeedView() {
+  const [selectedAlertType, setSelectedAlertType] = useState<AlertType>('Trail');
+  
+  const filteredAlerts = mockAlerts.filter(alert => alert.type === selectedAlertType);
+  
+  return (
+    <div className="min-h-screen bg-gray-50 flex flex-col max-w-md mx-auto">
+      {/* Orange Header Bar */}
+      <header className="bg-orange-500 text-white px-4 py-3 flex items-center justify-between">
+        <h1 className="text-lg font-bold">MHAZ</h1>
+        <div className="flex items-center gap-3">
+          <button className="p-1 hover:bg-orange-600 rounded">
+            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM7 10h5v5H7z"/>
+            </svg>
+          </button>
+        </div>
+      </header>
+
+      {/* Alert Type Toggles */}
+      <div className="bg-white px-4 py-3 border-b border-gray-200">
+        <div className="flex gap-1">
+          {(['Trail', 'LEO', 'Citation'] as AlertType[]).map((type) => {
+            const count = mockAlerts.filter(alert => alert.type === type).length;
+            const isSelected = selectedAlertType === type;
+            return (
+              <button
+                key={type}
+                onClick={() => setSelectedAlertType(type)}
+                className={`flex items-center gap-2 px-3 py-2 rounded-full text-sm font-medium transition-colors ${
+                  isSelected
+                    ? type === 'Trail'
+                      ? 'bg-orange-100 text-orange-800 border border-orange-300'
+                      : type === 'LEO'
+                      ? 'bg-blue-100 text-blue-800 border border-blue-300'
+                      : 'bg-red-100 text-red-800 border border-red-300'
+                    : 'text-gray-600 hover:text-gray-800 hover:bg-gray-50'
+                }`}
+              >
+                {type === 'Trail' && (
+                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M5 20.5c-2.2 0-4-1.8-4-4s1.8-4 4-4 4 1.8 4 4-1.8 4-4 4zm0-6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/>
+                    <path d="M19 20.5c-2.2 0-4-1.8-4-4s1.8-4 4-4 4 1.8 4 4-1.8 4-4 4zm0-6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/>
+                    <path d="M8.5 12.5l6-6" stroke="currentColor" strokeWidth="1.5" fill="none"/>
+                    <path d="M14.5 6.5l4 4" stroke="currentColor" strokeWidth="1.5" fill="none"/>
+                    <path d="M12 6.5c0-.8.7-1.5 1.5-1.5s1.5.7 1.5 1.5-.7 1.5-1.5 1.5-1.5-.7-1.5-1.5z"/>
+                    <rect x="11" y="8" width="2" height="6" rx="1"/>
+                  </svg>
+                )}
+                {type === 'LEO' && (
+                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z"/>
+                  </svg>
+                )}
+                {type === 'Citation' && (
+                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 2 2h8c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/>
+                  </svg>
+                )}
+                {type} ({count})
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Alert Feed */}
+      <div className="flex-1 px-4 py-4 space-y-3 overflow-y-auto">
+        {filteredAlerts.map((alert) => (
+          <div key={alert.id} className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+            <div className="flex items-start justify-between mb-2">
+              <div className="flex items-center gap-3">
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
+                  alert.type === 'Trail' 
+                    ? 'bg-orange-100' 
+                    : alert.type === 'LEO'
+                    ? 'bg-blue-100'
+                    : 'bg-red-100'
+                }`}>
+                  {alert.type === 'Trail' && (
+                    <svg className="w-4 h-4 text-orange-600" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M5 20.5c-2.2 0-4-1.8-4-4s1.8-4 4-4 4 1.8 4 4-1.8 4-4 4zm0-6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/>
+                      <path d="M19 20.5c-2.2 0-4-1.8-4-4s1.8-4 4-4 4 1.8 4 4-1.8 4-4 4zm0-6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/>
+                      <path d="M8.5 12.5l6-6" stroke="currentColor" strokeWidth="1.5" fill="none"/>
+                      <path d="M14.5 6.5l4 4" stroke="currentColor" strokeWidth="1.5" fill="none"/>
+                      <path d="M12 6.5c0-.8.7-1.5 1.5-1.5s1.5.7 1.5 1.5-.7 1.5-1.5 1.5-1.5-.7-1.5-1.5z"/>
+                      <rect x="11" y="8" width="2" height="6" rx="1"/>
+                    </svg>
+                  )}
+                  {alert.type === 'LEO' && (
+                    <svg className="w-4 h-4 text-blue-600" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z"/>
+                    </svg>
+                  )}
+                  {alert.type === 'Citation' && (
+                    <svg className="w-4 h-4 text-red-600" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 2 2h8c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/>
+                    </svg>
+                  )}
+                </div>
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-semibold text-gray-900 text-sm">{alert.category}</h3>
+                    {alert.status && (
+                      <span className={`text-xs px-2 py-0.5 rounded-full ${
+                        alert.status === 'Active' 
+                          ? 'bg-green-100 text-green-800' 
+                          : 'bg-gray-100 text-gray-600'
+                      }`}>
+                        {alert.status}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+              <span className="text-xs text-gray-500 whitespace-nowrap">{getTimeAgo(alert.reportedAt)}</span>
+            </div>
+            
+            <p className="text-gray-800 text-sm mb-3 overflow-hidden text-ellipsis" style={{
+              display: '-webkit-box',
+              WebkitLineClamp: 2,
+              WebkitBoxOrient: 'vertical'
+            }}>{alert.description}</p>
+            
+            <div className="flex items-center justify-between text-xs text-gray-500">
+              <span>by {alert.reportedBy}</span>
+              <button className="bg-blue-50 text-blue-600 hover:bg-blue-100 hover:text-blue-700 font-medium flex items-center gap-1 text-xs px-2 py-1 rounded border border-blue-200">
+                📍 Show on Map
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Bottom Navigation */}
+      <nav className="bg-white border-t border-gray-200 px-4 py-3">
+        <div className="flex justify-center">
+          <button className="p-2 hover:bg-gray-100 rounded">
+            <svg className="w-6 h-6 text-gray-600" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+            </svg>
+          </button>
+        </div>
+      </nav>
+    </div>
+  );
+}

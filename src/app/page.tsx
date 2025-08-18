@@ -22,7 +22,7 @@ const mockAlerts: Alert[] = [
     type: 'Trail',
     status: 'Active',
     category: 'Downed Tree',
-    location: 'Main trail near mile marker 3.2',
+    location: 'Eldridge Road Trail',
     description: 'Large oak tree blocking the main trail near mile marker 3.2',
     reportedBy: 'TrailMaintainer',
     reportedAt: new Date(Date.now() - 1 * 60 * 60 * 1000)
@@ -32,7 +32,7 @@ const mockAlerts: Alert[] = [
     type: 'Trail',
     status: 'Active',
     category: 'Washout',
-    location: 'Trail washed out after recent rains',
+    location: 'Tamarancho Trail',
     description: 'Trail washed out after recent rains, impassable for bikes',
     reportedBy: 'WeatherWatcher',
     reportedAt: new Date(Date.now() - 6 * 60 * 60 * 1000)
@@ -41,7 +41,7 @@ const mockAlerts: Alert[] = [
     id: '3',
     type: 'LEO',
     category: 'Law Enforcement',
-    location: 'Parking Area A',
+    location: 'Pine Ridge Parking',
     description: 'Increased patrol presence in parking areas',
     reportedBy: 'ParkRanger',
     reportedAt: new Date(Date.now() - 2 * 60 * 60 * 1000)
@@ -49,8 +49,8 @@ const mockAlerts: Alert[] = [
   {
     id: '4',
     type: 'Citation',
-    category: 'Parking Violation',
-    location: 'Trailhead B',
+    category: 'Citation Issued',
+    location: 'Bear Creek Trailhead',
     description: 'Vehicle cited for parking in no-parking zone',
     reportedBy: 'ParkOfficer',
     reportedAt: new Date(Date.now() - 4 * 60 * 60 * 1000)
@@ -187,6 +187,13 @@ export default function FeedView() {
               <span className="text-xs text-gray-500 whitespace-nowrap">{getTimeAgo(alert.reportedAt)}</span>
             </div>
             
+            <div className="flex items-center gap-1 mb-2">
+              <svg className="w-3 h-3 text-gray-600" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+              </svg>
+              <h4 className="font-bold text-gray-700 text-sm">{alert.location}</h4>
+            </div>
+            
             <p className="text-gray-800 text-sm mb-3 overflow-hidden text-ellipsis" style={{
               display: '-webkit-box',
               WebkitLineClamp: 2,
@@ -195,8 +202,11 @@ export default function FeedView() {
             
             <div className="flex items-center justify-between text-xs text-gray-500">
               <span>by {alert.reportedBy}</span>
-              <button className="bg-blue-50 text-blue-600 hover:bg-blue-100 hover:text-blue-700 font-medium flex items-center gap-1 text-xs px-2 py-1 rounded border border-blue-200">
-                📍 Show on Map
+              <button className="bg-blue-50 text-blue-600 hover:bg-blue-100 hover:text-blue-700 font-medium flex items-center gap-1 text-xs px-2 py-1 rounded">
+                <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M20.5 3l-.16.03L15 5.1 9 3 3.36 4.9c-.21.07-.36.25-.36.48V20.5c0 .28.22.5.5.5l.16-.03L9 18.9l6 2.1 5.64-1.9c.21-.07.36-.25.36-.48V3.5c0-.28-.22-.5-.5-.5zM10 5.47l4 1.4v11.66l-4-1.4V5.47zm-5 .99l3-1.01v11.7l-3 1.01V6.46zm14 11.08l-3 1.01V6.86l3-1.01v11.69z"/>
+                </svg>
+                Show on Map
               </button>
             </div>
           </div>

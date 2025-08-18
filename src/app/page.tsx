@@ -1,11 +1,30 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Map, Marker } from 'react-map-gl/mapbox';
 import 'mapbox-gl/dist/mapbox-gl.css';
 
 type AlertType = 'Trail' | 'LEO' | 'Citation';
 type AlertStatus = 'Active' | 'Resolved';
+type DateFilterPreset = 'today' | 'last 7d' | 'last 14d' | 'last 30d' | 'custom';
+
+interface UserProfile {
+  name: string;
+  email: string;
+  location: string;
+}
+
+interface BillingInfo {
+  cardNumber: string;
+  expiryDate: string;
+  cardholderName: string;
+  billingAddress: string;
+}
+
+interface DateRange {
+  start: Date;
+  end: Date;
+}
 
 interface Alert {
   id: string;
@@ -18,6 +37,7 @@ interface Alert {
   reportedAt: Date;
   latitude: number;
   longitude: number;
+  photos?: string[];
 }
 
 const mockAlerts: Alert[] = [
@@ -27,11 +47,12 @@ const mockAlerts: Alert[] = [
     status: 'Active',
     category: 'Downed Tree',
     location: 'Eldridge Road Trail',
-    description: 'Large oak tree blocking the main trail near mile marker 3.2',
+    description: 'Large oak tree blocking the main trail near mile marker 3.2. The tree appears to have fallen during last night\'s storm and is completely blocking passage for both hikers and mountain bikers. The trunk is approximately 2 feet in diameter and extends across the entire width of the trail. Multiple smaller branches have also fallen in the immediate area, creating additional hazards.',
     reportedBy: 'TrailMaintainer',
     reportedAt: new Date(Date.now() - 1 * 60 * 60 * 1000),
     latitude: 38.0293,
-    longitude: -122.6814
+    longitude: -122.6814,
+    photos: ['/api/placeholder/400/300', '/api/placeholder/400/300']
   },
   {
     id: '2',
@@ -39,18 +60,19 @@ const mockAlerts: Alert[] = [
     status: 'Active',
     category: 'Washout',
     location: 'Tamarancho Trail',
-    description: 'Trail washed out after recent rains, impassable for bikes',
+    description: 'Trail washed out after recent rains, impassable for bikes. The erosion has created a deep channel approximately 4 feet wide and 3 feet deep that cuts directly across the trail surface. The surrounding area is extremely muddy and unstable. Water continues to flow through this section, making it dangerous for all trail users. Temporary barriers have been placed to warn approaching riders and hikers.',
     reportedBy: 'WeatherWatcher',
     reportedAt: new Date(Date.now() - 6 * 60 * 60 * 1000),
     latitude: 37.9735,
-    longitude: -122.5467
+    longitude: -122.5467,
+    photos: ['/api/placeholder/400/300']
   },
   {
     id: '3',
     type: 'LEO',
     category: 'Law Enforcement',
     location: 'Pine Ridge Parking',
-    description: 'Increased patrol presence in parking areas',
+    description: 'Increased patrol presence in parking areas due to recent reports of vehicle break-ins and theft from cars. Officers will be conducting regular patrols throughout the day and evening hours. Visitors are reminded to lock vehicles and avoid leaving valuables visible.',
     reportedBy: 'ParkRanger',
     reportedAt: new Date(Date.now() - 2 * 60 * 60 * 1000),
     latitude: 38.0522,
@@ -61,11 +83,83 @@ const mockAlerts: Alert[] = [
     type: 'Citation',
     category: 'Citation Issued',
     location: 'Bear Creek Trailhead',
-    description: 'Vehicle cited for parking in no-parking zone',
+    description: 'Vehicle cited for parking in no-parking zone, blocking emergency vehicle access. The vehicle was parked directly in front of the emergency gate, preventing potential access for fire trucks and ambulances.',
     reportedBy: 'ParkOfficer',
     reportedAt: new Date(Date.now() - 4 * 60 * 60 * 1000),
     latitude: 37.9441,
     longitude: -122.5658
+  },
+  {
+    id: '5',
+    type: 'Trail',
+    status: 'Resolved',
+    category: 'Bridge Damage',
+    location: 'Mill Creek Trail',
+    description: 'Wooden bridge planks were loose and potentially dangerous for mountain bikers. Several planks had come loose from their supports and were creating a hazardous riding surface. Trail maintenance crew has secured all planks and replaced damaged hardware.',
+    reportedBy: 'TrailPatrol',
+    reportedAt: new Date(Date.now() - 12 * 60 * 60 * 1000),
+    latitude: 38.0100,
+    longitude: -122.6200
+  },
+  {
+    id: '6',
+    type: 'Trail',
+    status: 'Active',
+    category: 'Bee Swarm',
+    location: 'Sunset Ridge Fire Road',
+    description: 'Large bee swarm has taken up residence in the oak tree overhanging the trail at mile marker 5.8. The swarm is actively defending the area and multiple trail users have reported being chased. The bees appear to be Africanized honey bees based on their aggressive behavior. Local beekeepers have been contacted but removal may take several days. Trail users should avoid this section or proceed with extreme caution and consider alternative routes.',
+    reportedBy: 'HikerSafety',
+    reportedAt: new Date(Date.now() - 3 * 60 * 60 * 1000),
+    latitude: 38.0400,
+    longitude: -122.6000,
+    photos: ['/api/placeholder/400/300', '/api/placeholder/400/300']
+  },
+  {
+    id: '7',
+    type: 'LEO',
+    category: 'Search and Rescue',
+    location: 'Devil\'s Gulch Trail',
+    description: 'Search and rescue operation in progress for missing hiker last seen yesterday evening. Multiple agencies are coordinating the search including county sheriff, park rangers, and volunteer search teams. Trail access is temporarily restricted in the search area.',
+    reportedBy: 'SARCoordinator',
+    reportedAt: new Date(Date.now() - 30 * 60 * 1000),
+    latitude: 38.0600,
+    longitude: -122.5800
+  },
+  {
+    id: '8',
+    type: 'Trail',
+    status: 'Active',
+    category: 'Poison Oak Overgrowth',
+    location: 'Deer Park Loop',
+    description: 'Excessive poison oak growth has encroached onto the trail, particularly in the shaded sections between miles 2.1 and 2.7. The vegetation is touching the trail surface in multiple locations, making it impossible to pass without contact. Trail users with sensitivity to poison oak should avoid this section until maintenance crews can clear the overgrowth. Long pants and long sleeves are strongly recommended for anyone attempting passage.',
+    reportedBy: 'NaturalistVolunteer',
+    reportedAt: new Date(Date.now() - 8 * 60 * 60 * 1000),
+    latitude: 37.9900,
+    longitude: -122.6400
+  },
+  {
+    id: '9',
+    type: 'Citation',
+    category: 'Off-Trail Riding',
+    location: 'Meadow Creek Preserve',
+    description: 'Mountain biker cited for riding off designated trails in sensitive habitat area. Rider was observed creating new trail damage in protected wetland area.',
+    reportedBy: 'EnvironmentalOfficer',
+    reportedAt: new Date(Date.now() - 5 * 60 * 60 * 1000),
+    latitude: 38.0200,
+    longitude: -122.5600
+  },
+  {
+    id: '10',
+    type: 'Trail',
+    status: 'Active',
+    category: 'Wild Animal Sighting',
+    location: 'Bobcat Ridge Trail',
+    description: 'Mountain lion sighting reported by multiple trail users near the water crossing at mile 4.2. A large adult mountain lion was observed drinking from the creek around 6:30 AM and showed no immediate fear of humans. The animal appeared healthy but was territorial around the water source. Hikers and bikers should make noise when approaching this area, travel in groups, and consider avoiding dawn and dusk hours when big cats are most active.',
+    reportedBy: 'WildlifeObserver',
+    reportedAt: new Date(Date.now() - 45 * 60 * 1000),
+    latitude: 38.0350,
+    longitude: -122.6100,
+    photos: ['/api/placeholder/400/300']
   }
 ];
 
@@ -81,12 +175,144 @@ function getTimeAgo(date: Date): string {
   }
 }
 
+function getDateRange(preset: DateFilterPreset, customRange?: DateRange): DateRange {
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  
+  switch (preset) {
+    case 'today':
+      return { start: today, end: now };
+    case 'last 7d':
+      const sevenDaysAgo = new Date(today);
+      sevenDaysAgo.setDate(today.getDate() - 7);
+      return { start: sevenDaysAgo, end: now };
+    case 'last 14d':
+      const fourteenDaysAgo = new Date(today);
+      fourteenDaysAgo.setDate(today.getDate() - 14);
+      return { start: fourteenDaysAgo, end: now };
+    case 'last 30d':
+      const thirtyDaysAgo = new Date(today);
+      thirtyDaysAgo.setDate(today.getDate() - 30);
+      return { start: thirtyDaysAgo, end: now };
+    case 'custom':
+      if (customRange) return customRange;
+      const defaultCustomFourteenDaysAgo = new Date(today);
+      defaultCustomFourteenDaysAgo.setDate(today.getDate() - 14);
+      return { start: defaultCustomFourteenDaysAgo, end: now };
+    default:
+      const defaultFourteenDaysAgo = new Date(today);
+      defaultFourteenDaysAgo.setDate(today.getDate() - 14);
+      return { start: defaultFourteenDaysAgo, end: now };
+  }
+}
+
 export default function MHAZApp() {
+  // Existing state
   const [viewMode, setViewMode] = useState<'list' | 'map'>('map');
   const [selectedAlertTypes, setSelectedAlertTypes] = useState<AlertType[]>(['Trail', 'LEO', 'Citation']);
+  const [expandedAlert, setExpandedAlert] = useState<Alert | null>(null);
+  const [alerts, setAlerts] = useState<Alert[]>(mockAlerts);
+  const [showResolveDialog, setShowResolveDialog] = useState(false);
+  const [expandedPhoto, setExpandedPhoto] = useState<string | null>(null);
+  const [dateFilterPreset, setDateFilterPreset] = useState<DateFilterPreset>('last 14d');
+  const [customDateRange, setCustomDateRange] = useState<DateRange | null>(null);
+  const [showDateDropdown, setShowDateDropdown] = useState(false);
+  const [showCustomDateModal, setShowCustomDateModal] = useState(false);
   
-  const filteredAlerts = mockAlerts
+  // Map state
+  const [selectedMapAlert, setSelectedMapAlert] = useState<Alert | null>(null);
+  const [showMapPopup, setShowMapPopup] = useState(false);
+  const [expandedFromMap, setExpandedFromMap] = useState(false);
+  const [mapCenter, setMapCenter] = useState({ longitude: -122.5814, latitude: 38.0293, zoom: 10 });
+  
+  // User account state
+  const [isLoggedIn, setIsLoggedIn] = useState(true);
+  const [showUserMenu, setShowUserMenu] = useState(false);
+  const [showAccountModal, setShowAccountModal] = useState(false);
+  const [activeAccountTab, setActiveAccountTab] = useState<'profile' | 'billing'>('profile');
+  const [userProfile, setUserProfile] = useState<UserProfile>({
+    name: 'Trail Explorer',
+    email: 'user@example.com',
+    location: 'Marin County, CA'
+  });
+  const [billingInfo, setBillingInfo] = useState<BillingInfo>({
+    cardNumber: '**** **** **** 1234',
+    expiryDate: '12/25',
+    cardholderName: 'Trail Explorer',
+    billingAddress: '123 Main St, Marin County, CA 94941'
+  });
+  const [tempProfile, setTempProfile] = useState<UserProfile>(userProfile);
+  const [tempBilling, setTempBilling] = useState<BillingInfo>(billingInfo);
+  
+  // Refs
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const customModalRef = useRef<HTMLDivElement>(null);
+  const userMenuRef = useRef<HTMLDivElement>(null);
+  const mapRef = useRef<any>(null);
+  
+  const currentDateRange = getDateRange(dateFilterPreset, customDateRange || undefined);
+
+  // Handle click outside dropdown, custom modal, user menu, and map popup
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setShowDateDropdown(false);
+      }
+      if (customModalRef.current && !customModalRef.current.contains(event.target as Node)) {
+        setShowCustomDateModal(false);
+      }
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
+        setShowUserMenu(false);
+      }
+    };
+
+    if (showDateDropdown || showCustomDateModal || showUserMenu) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showDateDropdown, showCustomDateModal, showUserMenu]);
+  
+  // Handle map click to close popup
+  useEffect(() => {
+    const handleMapClick = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      // Close popup if clicking on map background (not on markers or popup)
+      if (showMapPopup && !target.closest('.mapboxgl-marker') && !target.closest('.absolute.inset-x-4.bottom-4')) {
+        setShowMapPopup(false);
+        setSelectedMapAlert(null);
+      }
+    };
+
+    if (showMapPopup && viewMode === 'map') {
+      document.addEventListener('click', handleMapClick);
+    }
+
+    return () => {
+      document.removeEventListener('click', handleMapClick);
+    };
+  }, [showMapPopup, viewMode]);
+
+  // Initialize custom date range when opening custom modal
+  const openCustomDateModal = () => {
+    if (!customDateRange) {
+      const now = new Date();
+      const fourteenDaysAgo = new Date();
+      fourteenDaysAgo.setDate(now.getDate() - 14);
+      setCustomDateRange({ start: fourteenDaysAgo, end: now });
+    }
+    setShowDateDropdown(false);
+    setShowCustomDateModal(true);
+  };
+  
+  const filteredAlerts = alerts
     .filter(alert => selectedAlertTypes.includes(alert.type))
+    .filter(alert => {
+      const alertDate = alert.reportedAt;
+      return alertDate >= currentDateRange.start && alertDate <= currentDateRange.end;
+    })
     .sort((a, b) => b.reportedAt.getTime() - a.reportedAt.getTime());
   
   const toggleAlertType = (type: AlertType) => {
@@ -96,19 +322,94 @@ export default function MHAZApp() {
         : [...prev, type]
     );
   };
+
+  const handleResolveAlert = () => {
+    if (expandedAlert) {
+      setAlerts(prev => prev.map(alert => 
+        alert.id === expandedAlert.id 
+          ? { ...alert, status: 'Resolved' as AlertStatus }
+          : alert
+      ));
+      setExpandedAlert(prev => prev ? { ...prev, status: 'Resolved' as AlertStatus } : null);
+      setShowResolveDialog(false);
+    }
+  };
+
+  const handleLogout = () => {
+    setIsLoggedIn(false);
+    setShowUserMenu(false);
+    // In a real app, this would redirect to login page
+    alert('Logged out successfully! In a real app, you would be redirected to login.');
+  };
+
+  const openAccountModal = (tab: 'profile' | 'billing' = 'profile') => {
+    setActiveAccountTab(tab);
+    setTempProfile(userProfile);
+    setTempBilling(billingInfo);
+    setShowUserMenu(false);
+    setShowAccountModal(true);
+  };
+
+  const handleSaveProfile = () => {
+    setUserProfile(tempProfile);
+    setShowAccountModal(false);
+  };
+
+  const handleSaveBilling = () => {
+    setBillingInfo(tempBilling);
+    setShowAccountModal(false);
+  };
+
+  const handleCancelAccount = () => {
+    setTempProfile(userProfile);
+    setTempBilling(billingInfo);
+    setShowAccountModal(false);
+  };
+
+  const handleShowOnMap = (alert: Alert) => {
+    // Switch to map view
+    setViewMode('map');
+    // Center map on the alert location and zoom in
+    const newCenter = { 
+      longitude: alert.longitude, 
+      latitude: alert.latitude, 
+      zoom: 14 
+    };
+    setMapCenter(newCenter);
+    
+    // Use setTimeout to ensure map is rendered before flying to location
+    setTimeout(() => {
+      if (mapRef.current) {
+        mapRef.current.flyTo({
+          center: [alert.longitude, alert.latitude],
+          zoom: 14,
+          duration: 1000
+        });
+      }
+    }, 100);
+    
+    // Set the alert as selected and show popup
+    setSelectedMapAlert(alert);
+    setShowMapPopup(true);
+  };
   
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col max-w-md mx-auto">
+    <div className="h-screen bg-gray-50 flex flex-col max-w-md mx-auto relative">
       {/* Orange Header Bar */}
-      <header className="bg-orange-500 text-white px-4 py-3 flex items-center justify-between">
+      <header className="bg-orange-500 text-white px-4 py-3 flex items-center justify-between flex-shrink-0">
         <h1 className="text-lg font-bold">MHAZ</h1>
         <div className="flex items-center gap-3">
-          <button className="p-1 hover:bg-orange-600 rounded">
-            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-              <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
-            </svg>
-          </button>
-          <button className="p-1 hover:bg-orange-600 rounded">
+          {viewMode === 'map' && (
+            <button className="p-1 hover:bg-orange-600 rounded">
+              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+              </svg>
+            </button>
+          )}
+          <button 
+            onClick={() => setShowDateDropdown(!showDateDropdown)}
+            className="p-1 hover:bg-orange-600 rounded relative"
+          >
             <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
               <path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM7 10h5v5H7z"/>
             </svg>
@@ -117,7 +418,7 @@ export default function MHAZApp() {
       </header>
 
       {/* Alert Type Toggles and View Toggle */}
-      <div className="bg-white px-4 py-3 border-b border-gray-200">
+      <div className="bg-white px-4 py-3 border-b border-gray-200 flex-shrink-0">
         <div className="flex items-center justify-between">
           <div className="flex gap-1">
             {(['Trail', 'LEO', 'Citation'] as AlertType[]).map((type) => {
@@ -189,14 +490,16 @@ export default function MHAZApp() {
       </div>
 
       {/* Content Area - Map or List */}
-      {viewMode === 'map' ? (
-        <div className="flex-1 relative">
+      <div className="flex-1 flex flex-col min-h-0">
+        {viewMode === 'map' ? (
+          <div className="flex-1 relative">
           <Map
+            ref={mapRef}
             mapboxAccessToken={process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN || ''}
             initialViewState={{
-              longitude: -122.5814,
-              latitude: 38.0293,
-              zoom: 10
+              longitude: mapCenter.longitude,
+              latitude: mapCenter.latitude,
+              zoom: mapCenter.zoom
             }}
             style={{ width: '100%', height: '100%' }}
             mapStyle="mapbox://styles/mapbox/outdoors-v12"
@@ -207,23 +510,130 @@ export default function MHAZApp() {
                 longitude={alert.longitude}
                 latitude={alert.latitude}
               >
-                <div className={`w-6 h-6 rounded-full flex items-center justify-center border-2 border-white shadow-md ${
-                  alert.type === 'Trail' 
-                    ? 'bg-orange-500' 
-                    : alert.type === 'LEO'
-                    ? 'bg-blue-500'
-                    : 'bg-red-500'
-                }`}>
+                <button
+                  onClick={() => {
+                    setSelectedMapAlert(alert);
+                    setShowMapPopup(true);
+                  }}
+                  className={`w-6 h-6 rounded-full flex items-center justify-center border-2 border-white shadow-md hover:scale-110 transition-transform cursor-pointer ${
+                    alert.type === 'Trail' 
+                      ? 'bg-orange-500 hover:bg-orange-600' 
+                      : alert.type === 'LEO'
+                      ? 'bg-blue-500 hover:bg-blue-600'
+                      : 'bg-red-500 hover:bg-red-600'
+                  }`}
+                >
                   <div className="w-2 h-2 bg-white rounded-full"></div>
-                </div>
+                </button>
               </Marker>
             ))}
           </Map>
-        </div>
-      ) : (
-        <div className="flex-1 px-4 py-4 space-y-3 overflow-y-auto">
+          
+          {/* Map Popup */}
+          {showMapPopup && selectedMapAlert && (
+            <div className="absolute inset-x-4 bottom-4 bg-white rounded-lg shadow-xl border border-gray-200 p-4 z-10">
+              <div className="flex items-start justify-between mb-2">
+                <div className="flex items-center gap-3 flex-1">
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
+                    selectedMapAlert.type === 'Trail' 
+                      ? 'bg-orange-100' 
+                      : selectedMapAlert.type === 'LEO'
+                      ? 'bg-blue-100'
+                      : 'bg-red-100'
+                  }`}>
+                    {selectedMapAlert.type === 'Trail' && (
+                      <svg className="w-4 h-4 text-orange-600" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M5 20.5c-2.2 0-4-1.8-4-4s1.8-4 4-4 4 1.8 4 4-1.8 4-4 4zm0-6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/>
+                        <path d="M19 20.5c-2.2 0-4-1.8-4-4s1.8-4 4-4 4 1.8 4 4-1.8 4-4 4zm0-6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/>
+                        <path d="M8.5 12.5l6-6" stroke="currentColor" strokeWidth="1.5" fill="none"/>
+                        <path d="M14.5 6.5l4 4" stroke="currentColor" strokeWidth="1.5" fill="none"/>
+                        <path d="M12 6.5c0-.8.7-1.5 1.5-1.5s1.5.7 1.5 1.5-.7 1.5-1.5 1.5-1.5-.7-1.5-1.5z"/>
+                        <rect x="11" y="8" width="2" height="6" rx="1"/>
+                      </svg>
+                    )}
+                    {selectedMapAlert.type === 'LEO' && (
+                      <svg className="w-4 h-4 text-blue-600" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z"/>
+                      </svg>
+                    )}
+                    {selectedMapAlert.type === 'Citation' && (
+                      <svg className="w-4 h-4 text-red-600" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 2 2h8c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/>
+                      </svg>
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <h3 className="font-semibold text-gray-900 text-sm">{selectedMapAlert.category}</h3>
+                      {selectedMapAlert.status && (
+                        <span className={`text-xs px-2 py-0.5 rounded-full ${
+                          selectedMapAlert.status === 'Active' 
+                            ? 'bg-blue-100 text-blue-800' 
+                            : 'bg-green-100 text-green-800'
+                        }`}>
+                          {selectedMapAlert.status}
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-1 mb-2">
+                      <svg className="w-3 h-3 text-gray-600" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+                      </svg>
+                      <h4 className="font-medium text-gray-700 text-sm">{selectedMapAlert.location}</h4>
+                    </div>
+                  </div>
+                </div>
+                <button
+                  onClick={() => {
+                    setShowMapPopup(false);
+                    setSelectedMapAlert(null);
+                  }}
+                  className="p-1 hover:bg-gray-100 rounded text-gray-500 hover:text-gray-700 ml-2"
+                >
+                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+                  </svg>
+                </button>
+              </div>
+              
+              <p className="text-gray-800 text-sm mb-3 line-clamp-2">
+                {selectedMapAlert.description.length > 120 
+                  ? selectedMapAlert.description.substring(0, 120) + '...' 
+                  : selectedMapAlert.description}
+              </p>
+              
+              <div className="flex items-center justify-between">
+                <div className="text-xs text-gray-500">
+                  <span>by {selectedMapAlert.reportedBy}</span>
+                  <span className="mx-2">•</span>
+                  <span>{getTimeAgo(selectedMapAlert.reportedAt)}</span>
+                </div>
+                <button
+                  onClick={() => {
+                    setExpandedAlert(selectedMapAlert);
+                    setExpandedFromMap(true);
+                    setShowMapPopup(false);
+                    setSelectedMapAlert(null);
+                  }}
+                  className="bg-orange-500 hover:bg-orange-600 text-white text-xs px-3 py-1.5 rounded-lg font-medium transition-colors"
+                >
+                  View Details
+                </button>
+              </div>
+            </div>
+          )}
+          </div>
+        ) : (
+          <div className="flex-1 px-4 py-4 space-y-3 overflow-y-auto">
           {filteredAlerts.map((alert) => (
-            <div key={alert.id} className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+            <div 
+              key={alert.id} 
+              className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 cursor-pointer hover:shadow-md transition-shadow"
+              onClick={() => {
+                setExpandedAlert(alert);
+                setExpandedFromMap(false);
+              }}
+            >
               <div className="flex items-start justify-between mb-2">
                 <div className="flex items-center gap-3">
                   <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
@@ -260,8 +670,8 @@ export default function MHAZApp() {
                       {alert.status && (
                         <span className={`text-xs px-2 py-0.5 rounded-full ${
                           alert.status === 'Active' 
-                            ? 'bg-green-100 text-green-800' 
-                            : 'bg-gray-100 text-gray-600'
+                            ? 'bg-blue-100 text-blue-800' 
+                            : 'bg-green-100 text-green-800'
                         }`}>
                           {alert.status}
                         </span>
@@ -287,7 +697,13 @@ export default function MHAZApp() {
               
               <div className="flex items-center justify-between text-xs text-gray-500">
                 <span>by {alert.reportedBy}</span>
-                <button className="bg-blue-50 text-blue-600 hover:bg-blue-100 hover:text-blue-700 font-medium flex items-center gap-1 text-xs px-2 py-1 rounded">
+                <button 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleShowOnMap(alert);
+                  }}
+                  className="bg-blue-50 text-blue-600 hover:bg-blue-100 hover:text-blue-700 font-medium flex items-center gap-1 text-xs px-2 py-1 rounded"
+                >
                   <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
                     <path d="M20.5 3l-.16.03L15 5.1 9 3 3.36 4.9c-.21.07-.36.25-.36.48V20.5c0 .28.22.5.5.5l.16-.03L9 18.9l6 2.1 5.64-1.9c.21-.07.36-.25.36-.48V3.5c0-.28-.22-.5-.5-.5zM10 5.47l4 1.4v11.66l-4-1.4V5.47zm-5 .99l3-1.01v11.7l-3 1.01V6.46zm14 11.08l-3 1.01V6.86l3-1.01v11.69z"/>
                   </svg>
@@ -296,19 +712,557 @@ export default function MHAZApp() {
               </div>
             </div>
           ))}
-        </div>
-      )}
+          </div>
+        )}
+      </div>
 
-      {/* Bottom Navigation */}
-      <nav className="bg-white border-t border-gray-200 px-4 py-3">
-        <div className="flex justify-center">
-          <button className="p-2 hover:bg-gray-100 rounded">
+      {/* Bottom Navigation - Static */}
+      <nav className="bg-gray-100 border-t border-gray-200 px-4 py-3 flex-shrink-0">
+        <div className="flex justify-center relative">
+          <button 
+            onClick={() => setShowUserMenu(!showUserMenu)}
+            className="p-2 hover:bg-gray-200 rounded"
+          >
             <svg className="w-6 h-6 text-gray-600" fill="currentColor" viewBox="0 0 24 24">
               <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
             </svg>
           </button>
         </div>
       </nav>
+
+      {/* User Menu - Floating Centered */}
+      {showUserMenu && (
+        <div ref={userMenuRef} className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-[55] bg-white rounded-lg shadow-xl border border-gray-200 w-64">
+            <div className="p-4 space-y-2">
+              <div className="text-center pb-3 border-b border-gray-200">
+                <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-2">
+                  <svg className="w-8 h-8 text-orange-600" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                  </svg>
+                </div>
+                <h3 className="font-semibold text-gray-900">{userProfile.name}</h3>
+                <p className="text-sm text-gray-500">{userProfile.location}</p>
+              </div>
+              
+              <button
+                onClick={() => openAccountModal('profile')}
+                className="w-full flex items-center gap-3 px-4 py-3 text-left text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
+              >
+                <svg className="w-5 h-5 text-gray-600" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/>
+                </svg>
+                Account Settings
+              </button>
+              
+              <button
+                onClick={handleLogout}
+                className="w-full flex items-center gap-3 px-4 py-3 text-left text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+              >
+                <svg className="w-5 h-5 text-red-600" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.59L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"/>
+                </svg>
+                Logout
+              </button>
+            </div>
+        </div>
+      )}
+
+      {/* Expanded Alert View - Full Modal */}
+      {expandedAlert && (
+        <div className="fixed inset-0 bg-white z-50 flex flex-col max-w-md mx-auto">
+          {/* Header */}
+          <header className="bg-orange-500 text-white px-4 py-3 flex items-center justify-between">
+            <button 
+              onClick={() => {
+                setExpandedAlert(null);
+                setExpandedFromMap(false);
+              }} 
+              className="p-1 hover:bg-orange-600 rounded"
+            >
+              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.42-1.41L7.83 13H20v-2z"/>
+              </svg>
+            </button>
+            <h1 className="text-lg font-bold">Alert Details</h1>
+            <div className="w-6"></div>
+          </header>
+
+          {/* Content */}
+          <div className="flex-1 overflow-y-auto p-4">
+            <div className="space-y-4">
+              {/* Alert Header */}
+              <div className="flex items-start justify-between">
+                <div className="flex items-center gap-3">
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
+                    expandedAlert.type === 'Trail' 
+                      ? 'bg-orange-100' 
+                      : expandedAlert.type === 'LEO'
+                      ? 'bg-blue-100'
+                      : 'bg-red-100'
+                  }`}>
+                    {expandedAlert.type === 'Trail' && (
+                      <svg className="w-5 h-5 text-orange-600" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M5 20.5c-2.2 0-4-1.8-4-4s1.8-4 4-4 4 1.8 4 4-1.8 4-4 4zm0-6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/>
+                        <path d="M19 20.5c-2.2 0-4-1.8-4-4s1.8-4 4-4 4 1.8 4 4-1.8 4-4 4zm0-6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/>
+                        <path d="M8.5 12.5l6-6" stroke="currentColor" strokeWidth="1.5" fill="none"/>
+                        <path d="M14.5 6.5l4 4" stroke="currentColor" strokeWidth="1.5" fill="none"/>
+                        <path d="M12 6.5c0-.8.7-1.5 1.5-1.5s1.5.7 1.5 1.5-.7 1.5-1.5 1.5-1.5-.7-1.5-1.5z"/>
+                        <rect x="11" y="8" width="2" height="6" rx="1"/>
+                      </svg>
+                    )}
+                    {expandedAlert.type === 'LEO' && (
+                      <svg className="w-5 h-5 text-blue-600" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z"/>
+                      </svg>
+                    )}
+                    {expandedAlert.type === 'Citation' && (
+                      <svg className="w-5 h-5 text-red-600" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 2 2h8c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/>
+                      </svg>
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h3 className="font-bold text-gray-900 text-lg">{expandedAlert.category}</h3>
+                      {expandedAlert.status && (
+                        <span className={`text-sm px-2 py-1 rounded-full ${
+                          expandedAlert.status === 'Active' 
+                            ? 'bg-blue-100 text-blue-800' 
+                            : 'bg-green-100 text-green-800'
+                        }`}>
+                          {expandedAlert.status}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Location */}
+              <div className="flex items-center gap-2">
+                <svg className="w-4 h-4 text-gray-600" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+                </svg>
+                <h4 className="font-semibold text-gray-700">{expandedAlert.location}</h4>
+              </div>
+
+              {/* Photos - Only for Trail alerts and up to 2 */}
+              {expandedAlert.type === 'Trail' && expandedAlert.photos && expandedAlert.photos.length > 0 && (
+                <div className="space-y-2">
+                  <h5 className="font-semibold text-gray-700">Photos</h5>
+                  <div className="grid grid-cols-2 gap-3">
+                    {expandedAlert.photos.slice(0, 2).map((photo, index) => (
+                      <div key={index} className="relative cursor-pointer" onClick={() => setExpandedPhoto(photo)}>
+                        <img 
+                          src={photo} 
+                          alt={`Alert photo ${index + 1}`}
+                          className="w-full h-32 object-cover rounded-lg bg-gray-200 hover:opacity-90 transition-opacity"
+                        />
+                        <div className="absolute inset-0 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity bg-black bg-opacity-20 rounded-lg">
+                          <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M9 11H7v2h2v-2zm4 0h-2v2h2v-2zm4 0h-2v2h2v-2zm2-7h-4.18C14.4 2.84 13.3 2 12 2c-1.3 0-2.4.84-2.82 2H5c-.14 0-.27.01-.4.04-.39.08-.74.28-1.01.55-.18.18-.33.4-.43.64-.1.23-.16.49-.16.77v14c0 .27.06.54.16.78.1.23.25.45.43.64.27.27.62.47 1.01.55.13.03.26.04.4.04h14c.27 0 .54-.06.78-.16.23-.1.45-.25.64-.43.27-.27.47-.62.55-1.01.03-.13.04-.26.04-.4V6c0-.27-.06-.54-.16-.78-.1-.23-.25-.45-.43-.64-.27-.27-.62-.47-1.01-.55-.13-.03-.26-.04-.4-.04zM12 4c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm7 16H5V6h14v14z"/>
+                          </svg>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Description */}
+              <div className="space-y-2">
+                <h5 className="font-semibold text-gray-700">Description</h5>
+                <p className="text-gray-800 leading-relaxed">{expandedAlert.description}</p>
+              </div>
+
+              {/* Metadata */}
+              <div className="space-y-2 text-sm text-gray-600 bg-gray-50 p-3 rounded-lg">
+                <div className="flex justify-between">
+                  <span className="font-medium">Reported by:</span>
+                  <span>{expandedAlert.reportedBy}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="font-medium">Reported:</span>
+                  <span>{getTimeAgo(expandedAlert.reportedAt)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="font-medium">Type:</span>
+                  <span>{expandedAlert.type}</span>
+                </div>
+              </div>
+
+              {/* Show in Map View Button - Only when coming from feed view */}
+              {!expandedFromMap && (
+                <button
+                  onClick={() => {
+                    handleShowOnMap(expandedAlert);
+                    setExpandedAlert(null);
+                    setExpandedFromMap(false);
+                  }}
+                  className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-lg transition-colors flex items-center justify-center gap-2"
+                >
+                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M20.5 3l-.16.03L15 5.1 9 3 3.36 4.9c-.21.07-.36.25-.36.48V20.5c0 .28.22.5.5.5l.16-.03L9 18.9l6 2.1 5.64-1.9c.21-.07.36-.25.36-.48V3.5c0-.28-.22-.5-.5-.5zM10 5.47l4 1.4v11.66l-4-1.4V5.47zm-5 .99l3-1.01v11.7l-3 1.01V6.46zm14 11.08l-3 1.01V6.86l3-1.01v11.69z"/>
+                  </svg>
+                  Show in Map View
+                </button>
+              )}
+
+              {/* Resolve Button - Only for Trail Alerts */}
+              {expandedAlert.type === 'Trail' && expandedAlert.status === 'Active' && (
+                <button
+                  onClick={() => setShowResolveDialog(true)}
+                  className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-4 rounded-lg transition-colors"
+                >
+                  Mark as Resolved
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Resolve Confirmation Dialog */}
+      {showResolveDialog && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60] p-4">
+          <div className="bg-white rounded-lg p-6 w-full max-w-sm">
+            <h3 className="text-lg font-semibold text-gray-900 mb-3">Confirm Resolution</h3>
+            <p className="text-gray-600 mb-6">
+              Are you sure you want to mark this trail alert as resolved? This action confirms that the issue has been taken care of.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowResolveDialog(false)}
+                className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium py-2 px-4 rounded-lg transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleResolveAlert}
+                className="flex-1 bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-lg transition-colors"
+              >
+                Resolve
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Date Filter Dropdown */}
+      {showDateDropdown && (
+        <div ref={dropdownRef} className="absolute top-12 right-4 z-50 bg-white rounded-lg shadow-lg border border-gray-200 w-48">
+          <div className="p-2 space-y-1">
+            {[
+              { value: 'today', label: 'Today' },
+              { value: 'last 7d', label: 'Last 7d' },
+              { value: 'last 14d', label: 'Last 14d' },
+              { value: 'last 30d', label: 'Last 30d' }
+            ].map((preset) => (
+              <button
+                key={preset.value}
+                onClick={() => {
+                  setDateFilterPreset(preset.value as DateFilterPreset);
+                  setCustomDateRange(null);
+                  setShowDateDropdown(false);
+                }}
+                className={`w-full text-left px-4 py-3 text-sm font-medium rounded-lg transition-colors ${
+                  dateFilterPreset === preset.value && !customDateRange
+                    ? 'bg-orange-50 text-orange-800'
+                    : 'text-gray-700 hover:bg-gray-50'
+                }`}
+              >
+                {preset.label}
+              </button>
+            ))}
+            <hr className="my-2 border-gray-200" />
+            <button
+              onClick={openCustomDateModal}
+              className="w-full text-left px-4 py-3 text-sm font-medium rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+            >
+              Custom
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Custom Date Range Modal */}
+      {showCustomDateModal && (
+        <div ref={customModalRef} className="absolute top-16 right-4 z-[60] bg-white rounded-lg shadow-xl border border-gray-200 w-80">
+          <div className="p-4 space-y-4">
+            <h3 className="text-lg font-semibold text-gray-900">Custom Date Range</h3>
+            
+            <div className="space-y-3">
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-700">Start Date</label>
+                <input
+                  type="date"
+                  value={customDateRange?.start.toISOString().split("T")[0] || ''}
+                  max={new Date().toISOString().split("T")[0]}
+                  onChange={(e) => {
+                    const newStart = new Date(e.target.value);
+                    if (customDateRange) {
+                      const endDate = newStart > customDateRange.end ? newStart : customDateRange.end;
+                      setCustomDateRange({ start: newStart, end: endDate });
+                    } else {
+                      setCustomDateRange({ start: newStart, end: new Date() });
+                    }
+                  }}
+                  className="w-full p-3 text-sm text-gray-700 border border-gray-300 rounded-lg focus:outline-none focus:border-orange-500"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-700">End Date</label>
+                <input
+                  type="date"
+                  value={customDateRange?.end.toISOString().split("T")[0] || ''}
+                  min={customDateRange?.start.toISOString().split("T")[0] || ''}
+                  max={new Date().toISOString().split("T")[0]}
+                  onChange={(e) => {
+                    const newEnd = new Date(e.target.value);
+                    newEnd.setHours(23, 59, 59, 999);
+                    if (customDateRange) {
+                      setCustomDateRange({ start: customDateRange.start, end: newEnd });
+                    }
+                  }}
+                  className="w-full p-3 text-sm text-gray-700 border border-gray-300 rounded-lg focus:outline-none focus:border-orange-500"
+                />
+              </div>
+            </div>
+            
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setShowCustomDateModal(false);
+                  setCustomDateRange(null);
+                }}
+                className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium py-3 px-4 rounded-lg transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  setDateFilterPreset('custom');
+                  setShowCustomDateModal(false);
+                }}
+                className="flex-1 bg-orange-500 hover:bg-orange-600 text-white font-medium py-3 px-4 rounded-lg transition-colors"
+              >
+                Apply
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Photo Modal - Full Screen with X close */}
+      {expandedPhoto && (
+        <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-[70] p-4">
+          <div className="relative max-w-full max-h-full">
+            <button
+              onClick={() => setExpandedPhoto(null)}
+              className="absolute top-4 right-4 bg-black bg-opacity-50 text-white p-2 rounded-full hover:bg-opacity-70 transition-all z-10"
+            >
+              <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+              </svg>
+            </button>
+            <img 
+              src={expandedPhoto} 
+              alt="Expanded alert photo"
+              className="max-w-full max-h-full object-contain rounded-lg"
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Account Modal */}
+      {showAccountModal && (
+        <div className="fixed top-8 left-4 right-4 bottom-8 z-[60] bg-white rounded-lg shadow-xl border border-gray-200 max-w-md mx-auto flex flex-col">
+          {/* Header */}
+          <header className="bg-orange-500 text-white px-4 py-3 flex items-center justify-between rounded-t-lg">
+            <button onClick={handleCancelAccount} className="p-1 hover:bg-orange-600 rounded">
+              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.42-1.41L7.83 13H20v-2z"/>
+              </svg>
+            </button>
+            <h1 className="text-lg font-bold">Account Settings</h1>
+            <div className="w-6"></div>
+          </header>
+
+          {/* Tabs */}
+          <div className="bg-white border-b border-gray-200 flex-shrink-0">
+            <div className="flex">
+              <button
+                onClick={() => setActiveAccountTab('profile')}
+                className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
+                  activeAccountTab === 'profile'
+                    ? 'text-orange-600 border-b-2 border-orange-600'
+                    : 'text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                Profile
+              </button>
+              <button
+                onClick={() => setActiveAccountTab('billing')}
+                className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
+                  activeAccountTab === 'billing'
+                    ? 'text-orange-600 border-b-2 border-orange-600'
+                    : 'text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                Billing
+              </button>
+            </div>
+          </div>
+
+          {/* Content */}
+          <div className="flex-1 overflow-y-auto p-4">
+            {activeAccountTab === 'profile' ? (
+              <div className="space-y-4">
+                <div className="text-center pb-4">
+                  <div className="w-20 h-20 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                    <svg className="w-10 h-10 text-orange-600" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                    </svg>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Profile Name</label>
+                    <input
+                      type="text"
+                      value={tempProfile.name}
+                      onChange={(e) => setTempProfile(prev => ({ ...prev, name: e.target.value }))}
+                      className="w-full p-3 text-sm text-gray-700 border border-gray-300 rounded-lg focus:outline-none focus:border-orange-500"
+                      placeholder="Enter your profile name"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
+                    <input
+                      type="email"
+                      value="••••••••@••••••.com"
+                      disabled
+                      className="w-full p-3 text-sm text-gray-400 border border-gray-300 rounded-lg bg-gray-50"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">Email is hidden for privacy</p>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Location</label>
+                    <input
+                      type="text"
+                      value={tempProfile.location}
+                      onChange={(e) => setTempProfile(prev => ({ ...prev, location: e.target.value }))}
+                      className="w-full p-3 text-sm text-gray-700 border border-gray-300 rounded-lg focus:outline-none focus:border-orange-500"
+                      placeholder="Enter your location"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex gap-3 pt-4">
+                  <button
+                    onClick={handleCancelAccount}
+                    className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium py-3 px-4 rounded-lg transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleSaveProfile}
+                    className="flex-1 bg-orange-500 hover:bg-orange-600 text-white font-medium py-3 px-4 rounded-lg transition-colors"
+                  >
+                    Save Profile
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Card Number</label>
+                    <input
+                      type="text"
+                      value={tempBilling.cardNumber}
+                      onChange={(e) => setTempBilling(prev => ({ ...prev, cardNumber: e.target.value }))}
+                      className="w-full p-3 text-sm text-gray-700 border border-gray-300 rounded-lg focus:outline-none focus:border-orange-500"
+                      placeholder="**** **** **** ****"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Expiry Date</label>
+                      <input
+                        type="text"
+                        value={tempBilling.expiryDate}
+                        onChange={(e) => setTempBilling(prev => ({ ...prev, expiryDate: e.target.value }))}
+                        className="w-full p-3 text-sm text-gray-700 border border-gray-300 rounded-lg focus:outline-none focus:border-orange-500"
+                        placeholder="MM/YY"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">CVV</label>
+                      <input
+                        type="text"
+                        placeholder="***"
+                        className="w-full p-3 text-sm text-gray-700 border border-gray-300 rounded-lg focus:outline-none focus:border-orange-500"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Cardholder Name</label>
+                    <input
+                      type="text"
+                      value={tempBilling.cardholderName}
+                      onChange={(e) => setTempBilling(prev => ({ ...prev, cardholderName: e.target.value }))}
+                      className="w-full p-3 text-sm text-gray-700 border border-gray-300 rounded-lg focus:outline-none focus:border-orange-500"
+                      placeholder="Enter cardholder name"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Billing Address</label>
+                    <textarea
+                      value={tempBilling.billingAddress}
+                      onChange={(e) => setTempBilling(prev => ({ ...prev, billingAddress: e.target.value }))}
+                      className="w-full p-3 text-sm text-gray-700 border border-gray-300 rounded-lg focus:outline-none focus:border-orange-500"
+                      rows={3}
+                      placeholder="Enter billing address"
+                    />
+                  </div>
+
+                  <div className="bg-blue-50 p-3 rounded-lg">
+                    <div className="flex items-center gap-2 mb-2">
+                      <svg className="w-4 h-4 text-blue-600" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                      </svg>
+                      <span className="text-sm font-medium text-blue-800">Premium Plan</span>
+                    </div>
+                    <p className="text-sm text-blue-600">$9.99/month • Next billing: Jan 18, 2025</p>
+                  </div>
+                </div>
+
+                <div className="flex gap-3 pt-4">
+                  <button
+                    onClick={handleCancelAccount}
+                    className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium py-3 px-4 rounded-lg transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleSaveBilling}
+                    className="flex-1 bg-orange-500 hover:bg-orange-600 text-white font-medium py-3 px-4 rounded-lg transition-colors"
+                  >
+                    Save Billing
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

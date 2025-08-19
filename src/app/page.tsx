@@ -1335,8 +1335,16 @@ export default function MHAZApp() {
               console.log('🔧 Supabase URL:', process.env.NEXT_PUBLIC_SUPABASE_URL);
               console.log('🔧 Supabase Key:', process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? 'EXISTS' : 'MISSING');
               console.log('🔧 Supabase client:', supabase);
-              const result = await supabase.from('alerts').select('*');
-              console.log('🔬 DIRECT TEST Result:', result);
+              try {
+                console.log('🚀 About to make query...');
+                const result = await Promise.race([
+                  supabase.from('alerts').select('*'),
+                  new Promise((_, reject) => setTimeout(() => reject(new Error('TIMEOUT')), 5000))
+                ]);
+                console.log('🔬 DIRECT TEST Result:', result);
+              } catch (err) {
+                console.error('🚨 Query failed:', err);
+              }
             }} className="bg-red-600 text-white px-2 py-1 text-xs rounded hover:bg-red-700">
               TEST
             </button>

@@ -419,11 +419,13 @@ export default function MHAZApp() {
   const loadAlerts = async () => {
     console.log('🔄 Loading alerts from database...');
     try {
+      console.log('📡 Making Supabase query...');
       const { data, error } = await supabase
         .from('alerts')
         .select('*')
         .order('reported_at', { ascending: false });
 
+      console.log('📡 Supabase query completed');
       console.log('📊 Raw alerts data from DB:', data);
       console.log('❌ Alerts error (if any):', error);
 
@@ -453,7 +455,8 @@ export default function MHAZApp() {
         console.log('✅ Alerts loaded successfully!');
       }
     } catch (err) {
-      console.error('Alerts load error:', err);
+      console.error('❌ Alerts load error (catch block):', err);
+      console.error('❌ Error details:', JSON.stringify(err, null, 2));
     }
   };
 

@@ -311,12 +311,15 @@ export default function MHAZApp() {
     initAuth();
 
     // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       try {
         console.log('Auth state change:', event, session?.user?.email);
         setIsLoggedIn(!!session);
         if (session?.user) {
-          await loadUserProfile(session.user.id);
+          // Don't await - schedule async work to avoid client lockup
+          loadUserProfile(session.user.id).catch(err => 
+            console.error('Profile load error after auth change:', err)
+          );
         }
       } catch (err) {
         console.error('Auth state change error:', err);

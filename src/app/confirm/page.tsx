@@ -21,7 +21,7 @@ export default function ConfirmPage() {
           // Verify the email confirmation
           const { error } = await supabase.auth.verifyOtp({
             token_hash,
-            type: type as any
+            type: type as 'signup' | 'recovery' | 'invite' | 'magiclink'
           })
 
           if (error) {
@@ -49,7 +49,7 @@ export default function ConfirmPage() {
     }
 
     handleEmailConfirmation()
-  }, [searchParams, supabase, router])
+  }, [searchParams, router])
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center">

@@ -457,10 +457,15 @@ export default function MHAZApp() {
     }
   };
 
-  // Load alerts when component mounts
+  // Load alerts when component mounts AND when user logs in
   useEffect(() => {
-    loadAlerts();
-  }, []);
+    if (isLoggedIn) {
+      console.log('🔑 User is logged in, loading alerts...');
+      loadAlerts();
+    } else {
+      console.log('🚫 User not logged in, skipping alert loading');
+    }
+  }, [isLoggedIn]);
 
   // Handle click outside dropdown, custom modal, user menu, and map popup
   useEffect(() => {

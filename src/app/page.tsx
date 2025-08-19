@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Map, Marker, MapRef } from 'react-map-gl/mapbox';
 import 'mapbox-gl/dist/mapbox-gl.css';
+import { supabase } from '../lib/supabase';
 
 type AlertType = 'Trail' | 'LEO' | 'Citation';
 type AlertStatus = 'Active' | 'Resolved';
@@ -211,7 +212,7 @@ export default function MHAZApp() {
   const [viewMode, setViewMode] = useState<'list' | 'map'>('map');
   const [selectedAlertTypes, setSelectedAlertTypes] = useState<AlertType[]>(['Trail', 'LEO', 'Citation']);
   const [expandedAlert, setExpandedAlert] = useState<Alert | null>(null);
-  const [alerts, setAlerts] = useState<Alert[]>(mockAlerts);
+  const [alerts, setAlerts] = useState<Alert[]>([]);
   const [showResolveDialog, setShowResolveDialog] = useState(false);
   const [expandedPhoto, setExpandedPhoto] = useState<string | null>(null);
   const [dateFilterPreset, setDateFilterPreset] = useState<DateFilterPreset>('last 14d');
@@ -281,8 +282,114 @@ export default function MHAZApp() {
   const customModalRef = useRef<HTMLDivElement>(null);
   const userMenuRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapRef | null>(null);
+  const photoInputRef = useRef<HTMLInputElement>(null);
   
   const currentDateRange = getDateRange(dateFilterPreset, customDateRange || undefined);
+
+  // Authentication state management
+  useEffect(() => {
+    const initAuth = async () => {
+      try {
+        // Get initial session
+        const { data: { session }, error } = await supabase.auth.getSession();
+        if (error) {
+          console.error('Session error:', error);
+          return;
+        }
+        
+        setIsLoggedIn(!!session);
+        if (session?.user) {
+          // Load user profile
+          await loadUserProfile(session.user.id);
+        }
+      } catch (err) {
+        console.error('Auth init error:', err);
+      }
+    };
+
+    initAuth();
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      try {
+        console.log('Auth state change:', event, session?.user?.email);
+        setIsLoggedIn(!!session);
+        if (session?.user) {
+          await loadUserProfile(session.user.id);
+        }
+      } catch (err) {
+        console.error('Auth state change error:', err);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  // Load user profile from database
+  const loadUserProfile = async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
+
+      if (error) {
+        console.error('Error loading profile:', error);
+        return;
+      }
+
+      if (data) {
+        setUserProfile({
+          name: data.username,
+          email: data.email,
+          location: data.location || ''
+        });
+      }
+    } catch (err) {
+      console.error('Profile load error:', err);
+    }
+  };
+
+  // Load alerts from database
+  const loadAlerts = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('alerts')
+        .select('*')
+        .order('reported_at', { ascending: false });
+
+      if (error) {
+        console.error('Error loading alerts:', error);
+        return;
+      }
+
+      if (data) {
+        const formattedAlerts: Alert[] = data.map(alert => ({
+          id: alert.id,
+          type: alert.type,
+          status: alert.status,
+          category: alert.category,
+          location: alert.location,
+          description: alert.description,
+          reportedBy: 'Trail User',
+          reportedAt: new Date(alert.reported_at),
+          latitude: alert.latitude,
+          longitude: alert.longitude,
+          photos: alert.photos || undefined
+        }));
+
+        setAlerts(formattedAlerts);
+      }
+    } catch (err) {
+      console.error('Alerts load error:', err);
+    }
+  };
+
+  // Load alerts when component mounts
+  useEffect(() => {
+    loadAlerts();
+  }, []);
 
   // Handle click outside dropdown, custom modal, user menu, and map popup
   useEffect(() => {
@@ -367,25 +474,66 @@ export default function MHAZApp() {
     }
   };
 
-  const handleLogout = () => {
-    setIsLoggedIn(false);
-    setShowUserMenu(false);
-    // In a real app, this would redirect to login page
-    alert('Logged out successfully! In a real app, you would be redirected to login.');
+  const handleLogout = async () => {
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        console.error('Logout error:', error);
+        alert('Error logging out. Please try again.');
+        return;
+      }
+      setShowUserMenu(false);
+    } catch (err) {
+      console.error('Logout error:', err);
+      alert('Error logging out. Please try again.');
+    }
   };
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
     // Basic validation
     if (!loginEmail || !loginPassword) {
       alert('Please enter both email/username and password');
       return;
     }
     
-    // In a real app, you would validate credentials with your backend
-    // For demo purposes, accept any email/password combo
-    setIsLoggedIn(true);
-    setLoginEmail('');
-    setLoginPassword('');
+    console.log('Attempting login for:', loginEmail);
+    
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: loginEmail,
+        password: loginPassword
+      });
+
+      console.log('Login response:', { data, error });
+
+      if (error) {
+        console.error('Login error:', error);
+        
+        // Handle specific error cases
+        if (error.message.includes('Email not confirmed')) {
+          alert('Please check your email and click the confirmation link before signing in.');
+        } else if (error.message.includes('Invalid login credentials')) {
+          alert('Invalid email or password. Please check your credentials and try again.');
+        } else {
+          alert(`Login failed: ${error.message}`);
+        }
+        return;
+      }
+
+      if (data.session) {
+        console.log('Successfully logged in:', data.user?.email);
+        // Successfully logged in
+        setLoginEmail('');
+        setLoginPassword('');
+      } else {
+        console.log('No session created');
+        alert('Login failed - no session created. Please try again.');
+      }
+      
+    } catch (err) {
+      console.error('Login exception:', err);
+      alert('An error occurred during login. Please try again.');
+    }
   };
 
   const handleForgotPassword = () => {
@@ -402,7 +550,7 @@ export default function MHAZApp() {
     setAuthScreen('login');
   };
 
-  const handleSignUp = () => {
+  const handleSignUp = async () => {
     // Validate sign up form
     if (!signUpEmail || !signUpUsername || !signUpPassword || !signUpLocation) {
       alert('Please fill in all fields');
@@ -419,23 +567,44 @@ export default function MHAZApp() {
       return;
     }
     
-    // In a real app, you would create the account via your backend
-    // For demo purposes, create the account and log in
-    setUserProfile({
-      name: signUpUsername,
-      email: signUpEmail,
-      location: signUpLocation
-    });
-    
-    setIsLoggedIn(true);
-    
-    // Clear form
-    setSignUpEmail('');
-    setSignUpUsername('');
-    setSignUpPassword('');
-    setSignUpConfirmPassword('');
-    setSignUpLocation('');
-    setAuthScreen('login');
+    try {
+      // Create user in Supabase Auth
+      const { data, error } = await supabase.auth.signUp({
+        email: signUpEmail,
+        password: signUpPassword,
+        options: {
+          data: {
+            username: signUpUsername,
+            location: signUpLocation
+          }
+        }
+      });
+
+      if (error) {
+        alert(`Sign up failed: ${error.message}`);
+        return;
+      }
+
+      if (data.user && !data.session) {
+        // Email confirmation required
+        alert('Please check your email and click the confirmation link to complete your account setup.');
+      } else if (data.session) {
+        // User is immediately logged in (if email confirmation is disabled)
+        alert('Account created successfully!');
+      }
+      
+      // Clear form
+      setSignUpEmail('');
+      setSignUpUsername('');
+      setSignUpPassword('');
+      setSignUpConfirmPassword('');
+      setSignUpLocation('');
+      setAuthScreen('login');
+      
+    } catch (err) {
+      console.error('Sign up error:', err);
+      alert('An error occurred during sign up. Please try again.');
+    }
   };
 
   const openAccountModal = (tab: 'profile' | 'billing' = 'profile') => {
@@ -539,6 +708,60 @@ export default function MHAZApp() {
     });
   };
 
+  // Photo upload handlers
+  const handlePhotoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (!files) return;
+
+    const maxPhotos = 2;
+    const maxFileSize = 10 * 1024 * 1024; // 10MB in bytes
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png'];
+
+    // Check if adding these files would exceed the limit
+    const currentPhotoCount = newAlertData.photos.length;
+    const filesToProcess = Array.from(files).slice(0, maxPhotos - currentPhotoCount);
+
+    if (filesToProcess.length === 0) {
+      alert('You can only upload up to 2 photos');
+      return;
+    }
+
+    filesToProcess.forEach(file => {
+      // Validate file type
+      if (!allowedTypes.includes(file.type)) {
+        alert('Please upload only PNG or JPG files');
+        return;
+      }
+
+      // Validate file size
+      if (file.size > maxFileSize) {
+        alert('File size must be less than 10MB');
+        return;
+      }
+
+      // Convert to base64 data URL for preview (in a real app, you'd upload to storage)
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const dataUrl = e.target?.result as string;
+        setNewAlertData(prev => ({
+          ...prev,
+          photos: [...prev.photos, dataUrl]
+        }));
+      };
+      reader.readAsDataURL(file);
+    });
+
+    // Clear the input so the same file can be selected again
+    event.target.value = '';
+  };
+
+  const handleRemovePhoto = (index: number) => {
+    setNewAlertData(prev => ({
+      ...prev,
+      photos: prev.photos.filter((_, i) => i !== index)
+    }));
+  };
+
   const handleMapClick = (event: { lngLat: { lng: number; lat: number } }) => {
     if (isAddingAlert) {
       const { lng, lat } = event.lngLat;
@@ -582,27 +805,143 @@ export default function MHAZApp() {
            longitude <= marinBounds.east;
   };
 
-  const handleSubmitAlert = () => {
+  const handleSubmitAlert = async () => {
+    console.log('🚀 Starting alert submission...');
+    console.log('📋 Alert data:', { newAlertPin, newAlertData });
+    
     if (!newAlertPin || !newAlertData.type || !newAlertData.location || !newAlertData.description) {
+      console.log('❌ Validation failed - missing required fields');
+      console.log('Missing:', {
+        pin: !newAlertPin,
+        type: !newAlertData.type,
+        location: !newAlertData.location,
+        description: !newAlertData.description
+      });
       return;
     }
 
-    const newAlert: Alert = {
-      id: Date.now().toString(),
-      type: newAlertData.type as AlertType,
-      status: newAlertData.type === 'Trail' ? 'Active' : undefined,
-      category: newAlertData.category,
-      location: newAlertData.location,
-      description: newAlertData.description,
-      reportedBy: newAlertData.type === 'Citation' ? newAlertData.agency : userProfile.name,
-      reportedAt: new Date(),
-      latitude: newAlertPin.latitude,
-      longitude: newAlertPin.longitude,
-      photos: newAlertData.photos.length > 0 ? newAlertData.photos : undefined
-    };
+    try {
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        alert('You must be logged in to create alerts');
+        return;
+      }
 
-    setAlerts(prev => [newAlert, ...prev]);
-    handleCancelAddingAlert();
+      // Ensure user profile exists
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('id', user.id)
+        .single();
+
+      if (profileError && profileError.code === 'PGRST116') {
+        // Profile doesn't exist, create one
+        const { error: createError } = await supabase
+          .from('profiles')
+          .insert({
+            id: user.id,
+            email: user.email || '',
+            username: user.email?.split('@')[0] || 'user'
+          });
+
+        if (createError) {
+          console.error('Error creating profile:', createError);
+          alert('Unable to create user profile. Please try again.');
+          return;
+        }
+      } else if (profileError) {
+        console.error('Error checking profile:', profileError);
+        alert('Unable to verify user profile. Please try again.');
+        return;
+      }
+
+      // Check rate limiting - user can only submit 1 alert per 90 seconds
+      console.log('🔍 Checking rate limiting for user:', user.id);
+      const ninetySecondsAgo = new Date(Date.now() - 90 * 1000).toISOString();
+      console.log('⏰ Looking for alerts since:', ninetySecondsAgo);
+      
+      const { data: recentAlerts, error: rateLimitError } = await supabase
+        .from('alerts')
+        .select('reported_at')
+        .eq('reported_by', user.id)
+        .gte('reported_at', ninetySecondsAgo)
+        .limit(1);
+
+      console.log('📊 Rate limit query result:', { recentAlerts, rateLimitError });
+
+      if (rateLimitError) {
+        console.error('Error checking rate limit:', rateLimitError);
+        alert('Unable to verify submission rate. Please try again.');
+        return;
+      }
+
+      if (recentAlerts && recentAlerts.length > 0) {
+        const lastSubmission = new Date(recentAlerts[0].reported_at);
+        const timeSinceLastSubmission = Math.ceil((Date.now() - lastSubmission.getTime()) / 1000);
+        const timeRemaining = 90 - timeSinceLastSubmission;
+        console.log('🚫 Rate limit triggered!', { lastSubmission, timeSinceLastSubmission, timeRemaining });
+        alert(`Please wait ${timeRemaining} more seconds before submitting another alert.`);
+        return;
+      }
+
+      console.log('✅ Rate limit check passed, proceeding with alert creation');
+
+      // Prepare alert data for database
+      const alertData = {
+        type: newAlertData.type as AlertType,
+        status: newAlertData.type === 'Trail' ? 'Active' as AlertStatus : undefined,
+        category: newAlertData.category,
+        location: newAlertData.location,
+        description: newAlertData.description,
+        reported_by: user.id,
+        latitude: newAlertPin.latitude,
+        longitude: newAlertPin.longitude,
+        photos: newAlertData.photos.length > 0 ? newAlertData.photos : null,
+        citation_date: newAlertData.type === 'Citation' ? newAlertData.citationDate : null,
+        citation_time: newAlertData.type === 'Citation' ? newAlertData.citationTime : null,
+        agency: newAlertData.type === 'Citation' ? newAlertData.agency : null
+      };
+
+      // Insert into database
+      const { data, error } = await supabase
+        .from('alerts')
+        .insert(alertData)
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error creating alert:', error);
+        alert(`Failed to create alert: ${error.message}`);
+        return;
+      }
+
+      if (data) {
+        // Convert database format to app format and add to local state
+        const newAlert: Alert = {
+          id: data.id,
+          type: data.type,
+          status: data.status,
+          category: data.category,
+          location: data.location,
+          description: data.description,
+          reportedBy: userProfile?.name || 'Trail User',
+          reportedAt: new Date(data.reported_at),
+          latitude: data.latitude,
+          longitude: data.longitude,
+          photos: data.photos || undefined
+        };
+
+        setAlerts(prev => [newAlert, ...prev]);
+        alert('Alert created successfully!');
+      }
+
+      handleCancelAddingAlert();
+      
+    } catch (err) {
+      console.error('Alert creation error:', err);
+      alert('An error occurred while creating the alert. Please try again.');
+    }
   };
   
   // Show authentication screens if not logged in
@@ -847,7 +1186,7 @@ export default function MHAZApp() {
         <div className="flex items-center justify-between">
           <div className="flex gap-1">
             {(['Trail', 'LEO', 'Citation'] as AlertType[]).map((type) => {
-              const count = mockAlerts.filter(alert => alert.type === type).length;
+              const count = alerts.filter(alert => alert.type === type).length;
               const isSelected = selectedAlertTypes.includes(type);
               return (
                 <button
@@ -1897,13 +2236,52 @@ export default function MHAZApp() {
                       <label className="block text-sm font-medium text-gray-700 mb-2">
                         Photos (up to 2)
                       </label>
-                      <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
-                        <svg className="w-8 h-8 text-gray-400 mx-auto mb-2" fill="currentColor" viewBox="0 0 24 24">
-                          <path d="M9 16h6v-6h4l-7-7-7 7h4zm-4 2h14v2H5z"/>
-                        </svg>
-                        <p className="text-sm text-gray-600">Click to upload photos</p>
-                        <p className="text-xs text-gray-500 mt-1">PNG, JPG up to 10MB each</p>
-                      </div>
+                      
+                      {/* Hidden file input */}
+                      <input
+                        type="file"
+                        ref={photoInputRef}
+                        onChange={handlePhotoUpload}
+                        accept="image/png,image/jpeg,image/jpg"
+                        multiple
+                        className="hidden"
+                      />
+                      
+                      {/* Upload area */}
+                      {newAlertData.photos.length < 2 && (
+                        <div 
+                          className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center cursor-pointer hover:border-orange-400 transition-colors"
+                          onClick={() => photoInputRef.current?.click()}
+                        >
+                          <svg className="w-8 h-8 text-gray-400 mx-auto mb-2" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M9 16h6v-6h4l-7-7-7 7h4zm-4 2h14v2H5z"/>
+                          </svg>
+                          <p className="text-sm text-gray-600">Click to upload photos</p>
+                          <p className="text-xs text-gray-500 mt-1">PNG, JPG up to 10MB each</p>
+                        </div>
+                      )}
+                      
+                      {/* Photo previews */}
+                      {newAlertData.photos.length > 0 && (
+                        <div className="grid grid-cols-2 gap-3 mt-3">
+                          {newAlertData.photos.map((photo, index) => (
+                            <div key={index} className="relative group">
+                              <img 
+                                src={photo} 
+                                alt={`Photo ${index + 1}`}
+                                className="w-full h-24 object-cover rounded-lg bg-gray-200"
+                              />
+                              <button
+                                onClick={() => handleRemovePhoto(index)}
+                                className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity"
+                                type="button"
+                              >
+                                ×
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>

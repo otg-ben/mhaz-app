@@ -263,14 +263,14 @@ export default function MHAZApp() {
   const [signUpConfirmPassword, setSignUpConfirmPassword] = useState('');
   const [signUpLocation, setSignUpLocation] = useState('');
   const [userProfile, setUserProfile] = useState<UserProfile>({
-    name: 'Trail Explorer',
-    email: 'user@example.com',
-    location: 'Marin County, CA'
+    name: '',
+    email: '',
+    location: ''
   });
   const [billingInfo, setBillingInfo] = useState<BillingInfo>({
     cardNumber: '**** **** **** 1234',
     expiryDate: '12/25',
-    cardholderName: 'Trail Explorer',
+    cardholderName: '',
     billingAddress: '123 Main St, Marin County, CA 94941'
   });
   const [tempProfile, setTempProfile] = useState<UserProfile>(userProfile);
@@ -336,6 +336,12 @@ export default function MHAZApp() {
         .single();
 
       if (error) {
+        // If profile doesn't exist, try to create one
+        if (error.code === 'PGRST116') {
+          console.log('Profile not found, creating one...');
+          await createMissingProfile(userId);
+          return;
+        }
         console.error('Error loading profile:', error);
         return;
       }
@@ -349,6 +355,63 @@ export default function MHAZApp() {
       }
     } catch (err) {
       console.error('Profile load error:', err);
+    }
+  };
+
+  const createMissingProfile = async (userId: string) => {
+    try {
+      // Get user info from auth
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const username = user.user_metadata?.username || 
+                      user.email?.split('@')[0] || 
+                      'User';
+      
+      const { data, error } = await supabase
+        .from('profiles')
+        .insert({
+          id: userId,
+          email: user.email,
+          username: username,
+          location: user.user_metadata?.location || ''
+        })
+        .select()
+        .single();
+
+      if (error) {
+        // Ignore duplicate key errors - profile already exists
+        if (error.code === '23505' || error.message?.includes('duplicate key')) {
+          console.log('Profile already exists, trying to fetch it again...');
+          // Try to fetch the existing profile directly
+          const { data: existingProfile } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', userId)
+            .single();
+          
+          if (existingProfile) {
+            setUserProfile({
+              name: existingProfile.username,
+              email: existingProfile.email,
+              location: existingProfile.location || ''
+            });
+          }
+          return;
+        }
+        console.error('Error creating profile:', error);
+        return;
+      }
+
+      if (data) {
+        setUserProfile({
+          name: data.username,
+          email: data.email,
+          location: data.location || ''
+        });
+      }
+    } catch (err) {
+      console.error('Create profile error:', err);
     }
   };
 
@@ -544,6 +607,14 @@ export default function MHAZApp() {
         alert('Error logging out. Please try again.');
         return;
       }
+      
+      // Clear user state
+      setUserProfile({
+        name: '',
+        email: '',
+        location: ''
+      });
+      setIsLoggedIn(false);
       setShowUserMenu(false);
     } catch (err) {
       console.error('Logout error:', err);
@@ -630,6 +701,8 @@ export default function MHAZApp() {
     }
     
     try {
+      console.log('Attempting signup with:', signUpEmail, signUpUsername);
+      
       // Create user in Supabase Auth
       const { data, error } = await supabase.auth.signUp({
         email: signUpEmail,
@@ -642,7 +715,10 @@ export default function MHAZApp() {
         }
       });
 
+      console.log('Signup response:', { data, error });
+
       if (error) {
+        console.error('Signup error:', error);
         alert(`Sign up failed: ${error.message}`);
         return;
       }
@@ -652,6 +728,20 @@ export default function MHAZApp() {
         alert('Please check your email and click the confirmation link to complete your account setup.');
       } else if (data.session) {
         // User is immediately logged in (if email confirmation is disabled)
+        // Create profile as fallback in case trigger didn't work
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .insert({
+            id: data.user.id,
+            email: signUpEmail,
+            username: signUpUsername,
+            location: signUpLocation
+          });
+        
+        if (profileError && !profileError.message.includes('duplicate key')) {
+          console.error('Profile creation error:', profileError);
+        }
+        
         alert('Account created successfully!');
       }
       

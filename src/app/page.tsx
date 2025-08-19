@@ -972,8 +972,11 @@ export default function MHAZApp() {
       return;
     }
 
+    console.log('✅ Validation passed, proceeding with submission');
+
     try {
       // Get current user
+      console.log('👤 Getting current user...');
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         alert('You must be logged in to create alerts');

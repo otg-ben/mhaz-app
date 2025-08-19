@@ -554,6 +554,14 @@ export default function MHAZApp() {
   };
 
   const handleConfirmLocation = () => {
+    if (!newAlertPin) return;
+    
+    // Check if location is within allowed bounds (Marin County + 2 mile buffer)
+    if (!isWithinMarinCounty(newAlertPin.longitude, newAlertPin.latitude)) {
+      alert('Alert location must be within Marin County. Please select a location within Marin County to create your alert.');
+      return;
+    }
+    
     setShowLocationConfirm(false);
     setShowAlertForm(true);
   };
@@ -1611,15 +1619,15 @@ export default function MHAZApp() {
             
             {/* Marin County validation */}
             {!isWithinMarinCounty(newAlertPin.longitude, newAlertPin.latitude) && (
-              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4">
+              <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4">
                 <div className="flex items-center gap-2 mb-2">
-                  <svg className="w-4 h-4 text-yellow-600" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/>
+                  <svg className="w-4 h-4 text-red-600" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M12 2C6.47 2 2 6.47 2 12s4.47 10 10 10 10-4.47 10-10S17.53 2 12 2zm5 13.59L15.59 17 12 13.41 8.41 17 7 15.59 10.59 12 7 8.41 8.41 7 12 10.59 15.59 7 17 8.41 13.41 12 17 15.59z"/>
                   </svg>
-                  <span className="text-sm font-medium text-yellow-800">Location Warning</span>
+                  <span className="text-sm font-medium text-red-800">Invalid Location</span>
                 </div>
-                <p className="text-sm text-yellow-700">
-                  This location appears to be outside Marin County. Please confirm this is correct.
+                <p className="text-sm text-red-700">
+                  This location is outside Marin County. Please select a location within Marin County to create your alert.
                 </p>
               </div>
             )}
@@ -1633,7 +1641,12 @@ export default function MHAZApp() {
               </button>
               <button
                 onClick={handleConfirmLocation}
-                className="flex-1 bg-orange-500 hover:bg-orange-600 text-white font-medium py-2 px-4 rounded-lg transition-colors"
+                disabled={!isWithinMarinCounty(newAlertPin.longitude, newAlertPin.latitude)}
+                className={`flex-1 font-medium py-2 px-4 rounded-lg transition-colors ${
+                  isWithinMarinCounty(newAlertPin.longitude, newAlertPin.latitude)
+                    ? 'bg-orange-500 hover:bg-orange-600 text-white'
+                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                }`}
               >
                 Confirm
               </button>

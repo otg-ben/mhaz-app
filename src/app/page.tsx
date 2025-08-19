@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { Map, Marker } from 'react-map-gl/mapbox';
+import { Map, Marker, MapRef } from 'react-map-gl/mapbox';
 import 'mapbox-gl/dist/mapbox-gl.css';
 
 type AlertType = 'Trail' | 'LEO' | 'Citation';
@@ -225,11 +225,41 @@ export default function MHAZApp() {
   const [expandedFromMap, setExpandedFromMap] = useState(false);
   const [mapCenter, setMapCenter] = useState({ longitude: -122.5814, latitude: 38.0293, zoom: 10 });
   
+  // Alert creation state
+  const [isAddingAlert, setIsAddingAlert] = useState(false);
+  const [newAlertPin, setNewAlertPin] = useState<{ longitude: number; latitude: number } | null>(null);
+  const [showLocationConfirm, setShowLocationConfirm] = useState(false);
+  const [showAlertForm, setShowAlertForm] = useState(false);
+  const [newAlertData, setNewAlertData] = useState({
+    type: '' as AlertType | '',
+    category: '',
+    location: '',
+    description: '',
+    agency: '',
+    citationDate: '',
+    citationTime: '',
+    photos: [] as string[]
+  });
+  
   // User account state
-  const [isLoggedIn, setIsLoggedIn] = useState(true);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showAccountModal, setShowAccountModal] = useState(false);
   const [activeAccountTab, setActiveAccountTab] = useState<'profile' | 'billing'>('profile');
+  
+  // Auth screen state
+  const [authScreen, setAuthScreen] = useState<'login' | 'forgot-password' | 'sign-up'>('login');
+  
+  // Login form state
+  const [loginEmail, setLoginEmail] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
+  
+  // Sign up form state
+  const [signUpEmail, setSignUpEmail] = useState('');
+  const [signUpUsername, setSignUpUsername] = useState('');
+  const [signUpPassword, setSignUpPassword] = useState('');
+  const [signUpConfirmPassword, setSignUpConfirmPassword] = useState('');
+  const [signUpLocation, setSignUpLocation] = useState('');
   const [userProfile, setUserProfile] = useState<UserProfile>({
     name: 'Trail Explorer',
     email: 'user@example.com',
@@ -243,12 +273,14 @@ export default function MHAZApp() {
   });
   const [tempProfile, setTempProfile] = useState<UserProfile>(userProfile);
   const [tempBilling, setTempBilling] = useState<BillingInfo>(billingInfo);
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   
   // Refs
   const dropdownRef = useRef<HTMLDivElement>(null);
   const customModalRef = useRef<HTMLDivElement>(null);
   const userMenuRef = useRef<HTMLDivElement>(null);
-  const mapRef = useRef<any>(null);
+  const mapRef = useRef<MapRef | null>(null);
   
   const currentDateRange = getDateRange(dateFilterPreset, customDateRange || undefined);
 
@@ -342,16 +374,98 @@ export default function MHAZApp() {
     alert('Logged out successfully! In a real app, you would be redirected to login.');
   };
 
+  const handleLogin = () => {
+    // Basic validation
+    if (!loginEmail || !loginPassword) {
+      alert('Please enter both email/username and password');
+      return;
+    }
+    
+    // In a real app, you would validate credentials with your backend
+    // For demo purposes, accept any email/password combo
+    setIsLoggedIn(true);
+    setLoginEmail('');
+    setLoginPassword('');
+  };
+
+  const handleForgotPassword = () => {
+    setAuthScreen('forgot-password');
+  };
+
+  const handleSendPasswordReset = () => {
+    if (!loginEmail) {
+      alert('Please enter your email address');
+      return;
+    }
+    // In a real app, this would send a password reset email
+    alert(`Password reset link sent to ${loginEmail}`);
+    setAuthScreen('login');
+  };
+
+  const handleSignUp = () => {
+    // Validate sign up form
+    if (!signUpEmail || !signUpUsername || !signUpPassword || !signUpLocation) {
+      alert('Please fill in all fields');
+      return;
+    }
+    
+    if (signUpPassword !== signUpConfirmPassword) {
+      alert('Passwords do not match');
+      return;
+    }
+    
+    if (signUpPassword.length < 6) {
+      alert('Password must be at least 6 characters long');
+      return;
+    }
+    
+    // In a real app, you would create the account via your backend
+    // For demo purposes, create the account and log in
+    setUserProfile({
+      name: signUpUsername,
+      email: signUpEmail,
+      location: signUpLocation
+    });
+    
+    setIsLoggedIn(true);
+    
+    // Clear form
+    setSignUpEmail('');
+    setSignUpUsername('');
+    setSignUpPassword('');
+    setSignUpConfirmPassword('');
+    setSignUpLocation('');
+    setAuthScreen('login');
+  };
+
   const openAccountModal = (tab: 'profile' | 'billing' = 'profile') => {
     setActiveAccountTab(tab);
     setTempProfile(userProfile);
     setTempBilling(billingInfo);
+    setNewPassword('');
+    setConfirmPassword('');
     setShowUserMenu(false);
     setShowAccountModal(true);
   };
 
   const handleSaveProfile = () => {
+    // Validate password if provided
+    if (newPassword && newPassword !== confirmPassword) {
+      alert('Passwords do not match');
+      return;
+    }
+    
+    if (newPassword && newPassword.length < 6) {
+      alert('Password must be at least 6 characters long');
+      return;
+    }
+    
     setUserProfile(tempProfile);
+    
+    // In a real app, you would send the password change request to your backend
+    
+    setNewPassword('');
+    setConfirmPassword('');
     setShowAccountModal(false);
   };
 
@@ -363,6 +477,8 @@ export default function MHAZApp() {
   const handleCancelAccount = () => {
     setTempProfile(userProfile);
     setTempBilling(billingInfo);
+    setNewPassword('');
+    setConfirmPassword('');
     setShowAccountModal(false);
   };
 
@@ -392,7 +508,304 @@ export default function MHAZApp() {
     setSelectedMapAlert(alert);
     setShowMapPopup(true);
   };
+
+  // Alert creation handlers
+  const handleStartAddingAlert = () => {
+    if (viewMode !== 'map') {
+      setViewMode('map');
+    }
+    setIsAddingAlert(true);
+    setNewAlertPin(null);
+    setShowLocationConfirm(false);
+    setShowAlertForm(false);
+    setShowMapPopup(false);
+    setSelectedMapAlert(null);
+  };
+
+  const handleCancelAddingAlert = () => {
+    setIsAddingAlert(false);
+    setNewAlertPin(null);
+    setShowLocationConfirm(false);
+    setShowAlertForm(false);
+    setNewAlertData({
+      type: '',
+      category: '',
+      location: '',
+      description: '',
+      agency: '',
+      citationDate: '',
+      citationTime: '',
+      photos: []
+    });
+  };
+
+  const handleMapClick = (event: { lngLat: { lng: number; lat: number } }) => {
+    if (isAddingAlert) {
+      const { lng, lat } = event.lngLat;
+      
+      if (!newAlertPin) {
+        // First click - place the pin
+        setNewAlertPin({ longitude: lng, latitude: lat });
+      } else {
+        // Subsequent clicks - show confirmation dialog
+        setShowLocationConfirm(true);
+      }
+    }
+  };
+
+  const handleConfirmLocation = () => {
+    setShowLocationConfirm(false);
+    setShowAlertForm(true);
+  };
+
+  // Marin County boundary check (simplified bounds with buffer)
+  const isWithinMarinCounty = (longitude: number, latitude: number): boolean => {
+    // Marin County approximate bounds with ~2 mile buffer
+    const marinBounds = {
+      north: 38.35,   // Northern boundary with buffer
+      south: 37.85,   // Southern boundary with buffer  
+      east: -122.35,  // Eastern boundary with buffer
+      west: -122.95   // Western boundary with buffer
+    };
+    
+    return latitude >= marinBounds.south && 
+           latitude <= marinBounds.north && 
+           longitude >= marinBounds.west && 
+           longitude <= marinBounds.east;
+  };
+
+  const handleSubmitAlert = () => {
+    if (!newAlertPin || !newAlertData.type || !newAlertData.location || !newAlertData.description) {
+      return;
+    }
+
+    const newAlert: Alert = {
+      id: Date.now().toString(),
+      type: newAlertData.type as AlertType,
+      status: newAlertData.type === 'Trail' ? 'Active' : undefined,
+      category: newAlertData.category,
+      location: newAlertData.location,
+      description: newAlertData.description,
+      reportedBy: newAlertData.type === 'Citation' ? newAlertData.agency : userProfile.name,
+      reportedAt: new Date(),
+      latitude: newAlertPin.latitude,
+      longitude: newAlertPin.longitude,
+      photos: newAlertData.photos.length > 0 ? newAlertData.photos : undefined
+    };
+
+    setAlerts(prev => [newAlert, ...prev]);
+    handleCancelAddingAlert();
+  };
   
+  // Show authentication screens if not logged in
+  if (!isLoggedIn) {
+    return (
+      <div className="h-screen bg-gray-50 flex items-center justify-center max-w-md mx-auto">
+        <div className="w-full max-w-sm bg-white rounded-lg shadow-lg p-6">
+          {/* Logo */}
+          <div className="text-center mb-6">
+            <h1 className="text-2xl font-bold text-orange-500 mb-2">MHAZ</h1>
+            <p className="text-gray-600 text-sm">Marin County Trail Alerts</p>
+          </div>
+
+          {/* Login Screen */}
+          {authScreen === 'login' && (
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Email or Profile Name
+                </label>
+                <input
+                  type="text"
+                  value={loginEmail}
+                  onChange={(e) => setLoginEmail(e.target.value)}
+                  className="w-full p-3 text-sm text-gray-700 border border-gray-300 rounded-lg focus:outline-none focus:border-orange-500"
+                  placeholder="Enter email or profile name"
+                  onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Password
+                </label>
+                <input
+                  type="password"
+                  value={loginPassword}
+                  onChange={(e) => setLoginPassword(e.target.value)}
+                  className="w-full p-3 text-sm text-gray-700 border border-gray-300 rounded-lg focus:outline-none focus:border-orange-500"
+                  placeholder="Enter password"
+                  onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
+                />
+              </div>
+
+              <button
+                onClick={handleLogin}
+                className="w-full bg-orange-500 hover:bg-orange-600 text-white font-medium py-3 px-4 rounded-lg transition-colors"
+              >
+                Sign In
+              </button>
+
+              {/* Forgot Password Link */}
+              <div className="text-center">
+                <button
+                  onClick={handleForgotPassword}
+                  className="text-sm text-orange-500 hover:text-orange-600 transition-colors"
+                >
+                  Forgot Password?
+                </button>
+              </div>
+
+              {/* Sign Up Link */}
+              <div className="text-center pt-4 border-t border-gray-200">
+                <p className="text-sm text-gray-600">
+                  Don&apos;t have an account?{' '}
+                  <button
+                    onClick={() => setAuthScreen('sign-up')}
+                    className="text-orange-500 hover:text-orange-600 font-medium transition-colors"
+                  >
+                    Sign Up
+                  </button>
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Forgot Password Screen */}
+          {authScreen === 'forgot-password' && (
+            <div className="space-y-4">
+              <div className="text-center mb-4">
+                <h2 className="text-lg font-semibold text-gray-900 mb-2">Reset Password</h2>
+                <p className="text-sm text-gray-600">Enter your email address and we&apos;ll send you a link to reset your password.</p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Email Address
+                </label>
+                <input
+                  type="email"
+                  value={loginEmail}
+                  onChange={(e) => setLoginEmail(e.target.value)}
+                  className="w-full p-3 text-sm text-gray-700 border border-gray-300 rounded-lg focus:outline-none focus:border-orange-500"
+                  placeholder="Enter your email address"
+                  onKeyDown={(e) => e.key === 'Enter' && handleSendPasswordReset()}
+                />
+              </div>
+
+              <button
+                onClick={handleSendPasswordReset}
+                className="w-full bg-orange-500 hover:bg-orange-600 text-white font-medium py-3 px-4 rounded-lg transition-colors"
+              >
+                Send Reset Link
+              </button>
+
+              {/* Back to Login */}
+              <div className="text-center">
+                <button
+                  onClick={() => setAuthScreen('login')}
+                  className="text-sm text-orange-500 hover:text-orange-600 transition-colors"
+                >
+                  ← Back to Sign In
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Sign Up Screen */}
+          {authScreen === 'sign-up' && (
+            <div className="space-y-4">
+              <div className="text-center mb-4">
+                <h2 className="text-lg font-semibold text-gray-900 mb-2">Create Account</h2>
+                <p className="text-sm text-gray-600">Join the MHAZ community to report and view trail alerts.</p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Email Address
+                </label>
+                <input
+                  type="email"
+                  value={signUpEmail}
+                  onChange={(e) => setSignUpEmail(e.target.value)}
+                  className="w-full p-3 text-sm text-gray-700 border border-gray-300 rounded-lg focus:outline-none focus:border-orange-500"
+                  placeholder="Enter your email"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Username
+                </label>
+                <input
+                  type="text"
+                  value={signUpUsername}
+                  onChange={(e) => setSignUpUsername(e.target.value)}
+                  className="w-full p-3 text-sm text-gray-700 border border-gray-300 rounded-lg focus:outline-none focus:border-orange-500"
+                  placeholder="Choose a username"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Password
+                </label>
+                <input
+                  type="password"
+                  value={signUpPassword}
+                  onChange={(e) => setSignUpPassword(e.target.value)}
+                  className="w-full p-3 text-sm text-gray-700 border border-gray-300 rounded-lg focus:outline-none focus:border-orange-500 mb-3"
+                  placeholder="Create a password"
+                />
+                <input
+                  type="password"
+                  value={signUpConfirmPassword}
+                  onChange={(e) => setSignUpConfirmPassword(e.target.value)}
+                  className="w-full p-3 text-sm text-gray-700 border border-gray-300 rounded-lg focus:outline-none focus:border-orange-500"
+                  placeholder="Confirm password"
+                />
+                <p className="text-xs text-gray-500 mt-1">Password must be at least 6 characters</p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Location
+                </label>
+                <input
+                  type="text"
+                  value={signUpLocation}
+                  onChange={(e) => setSignUpLocation(e.target.value)}
+                  className="w-full p-3 text-sm text-gray-700 border border-gray-300 rounded-lg focus:outline-none focus:border-orange-500"
+                  placeholder="Enter your location"
+                />
+              </div>
+
+              <button
+                onClick={handleSignUp}
+                className="w-full bg-orange-500 hover:bg-orange-600 text-white font-medium py-3 px-4 rounded-lg transition-colors"
+              >
+                Create Account
+              </button>
+
+              {/* Back to Login */}
+              <div className="text-center pt-4 border-t border-gray-200">
+                <p className="text-sm text-gray-600">
+                  Already have an account?{' '}
+                  <button
+                    onClick={() => setAuthScreen('login')}
+                    className="text-orange-500 hover:text-orange-600 font-medium transition-colors"
+                  >
+                    Sign In
+                  </button>
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="h-screen bg-gray-50 flex flex-col max-w-md mx-auto relative">
       {/* Orange Header Bar */}
@@ -400,7 +813,11 @@ export default function MHAZApp() {
         <h1 className="text-lg font-bold">MHAZ</h1>
         <div className="flex items-center gap-3">
           {viewMode === 'map' && (
-            <button className="p-1 hover:bg-orange-600 rounded">
+            <button 
+              onClick={handleStartAddingAlert}
+              className="p-1 hover:bg-orange-600 rounded"
+              disabled={isAddingAlert}
+            >
               <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
                 <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
               </svg>
@@ -503,6 +920,7 @@ export default function MHAZApp() {
             }}
             style={{ width: '100%', height: '100%' }}
             mapStyle="mapbox://styles/mapbox/outdoors-v12"
+            onClick={handleMapClick}
           >
             {filteredAlerts.map((alert) => (
               <Marker
@@ -511,9 +929,12 @@ export default function MHAZApp() {
                 latitude={alert.latitude}
               >
                 <button
-                  onClick={() => {
-                    setSelectedMapAlert(alert);
-                    setShowMapPopup(true);
+                  onClick={(e) => {
+                    if (!isAddingAlert) {
+                      e.stopPropagation();
+                      setSelectedMapAlert(alert);
+                      setShowMapPopup(true);
+                    }
                   }}
                   className={`w-6 h-6 rounded-full flex items-center justify-center border-2 border-white shadow-md hover:scale-110 transition-transform cursor-pointer ${
                     alert.type === 'Trail' 
@@ -527,7 +948,95 @@ export default function MHAZApp() {
                 </button>
               </Marker>
             ))}
+            
+            {/* New Alert Pin - Draggable */}
+            {newAlertPin && (
+              <Marker
+                longitude={newAlertPin.longitude}
+                latitude={newAlertPin.latitude}
+                draggable={true}
+                onDragEnd={(event) => {
+                  setNewAlertPin({
+                    longitude: event.lngLat.lng,
+                    latitude: event.lngLat.lat
+                  });
+                }}
+              >
+                <div className="relative flex items-center justify-center cursor-move">
+                  {/* Pin Shadow */}
+                  <div className="absolute top-1 left-1 w-6 h-10 bg-black opacity-20 rounded-full blur-sm"></div>
+                  
+                  {/* Main Pin - Like the location icon */}
+                  <div className="relative flex flex-col items-center">
+                    <svg className="w-8 h-8 text-red-500 drop-shadow-lg" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+                    </svg>
+                  </div>
+                  
+                  {/* Pulsing Animation for Better Visibility */}
+                  <div className="absolute top-1 left-1 w-6 h-6 bg-red-500 rounded-full animate-pulse opacity-30"></div>
+                </div>
+              </Marker>
+            )}
           </Map>
+          
+          {/* Alert Adding Instructions */}
+          {isAddingAlert && !newAlertPin && (
+            <div className="absolute top-4 left-4 right-4 bg-orange-500 text-white p-3 rounded-lg shadow-lg z-10">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2 flex-1">
+                  <svg className="w-5 h-5 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+                  </svg>
+                  <div className="text-sm">
+                    <div className="font-medium">Tap the map to place your alert</div>
+                    <div className="opacity-90">Choose the exact location of the incident</div>
+                  </div>
+                </div>
+                <button
+                  onClick={handleCancelAddingAlert}
+                  className="bg-white bg-opacity-90 hover:bg-opacity-100 p-1 rounded transition-colors flex-shrink-0 text-gray-700"
+                >
+                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+                  </svg>
+                </button>
+              </div>
+            </div>
+          )}
+          
+          {/* Pin Adjustment Instructions */}
+          {isAddingAlert && newAlertPin && !showLocationConfirm && (
+            <div className="absolute top-4 left-4 right-4 bg-red-500 text-white p-3 rounded-lg shadow-lg z-10">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2 flex-1">
+                  <svg className="w-5 h-5 flex-shrink-0 animate-pulse" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+                  </svg>
+                  <div className="text-sm">
+                    <div className="font-medium">Drag pin to adjust location</div>
+                    <div className="opacity-90">Tap map or button to confirm</div>
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleCancelAddingAlert}
+                    className="bg-white bg-opacity-90 hover:bg-opacity-100 p-1 rounded transition-colors flex-shrink-0 text-gray-700"
+                  >
+                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+                    </svg>
+                  </button>
+                  <button
+                    onClick={() => setShowLocationConfirm(true)}
+                    className="bg-white bg-opacity-90 hover:bg-opacity-100 px-3 py-1 rounded text-sm font-medium transition-colors flex-shrink-0 text-gray-700"
+                  >
+                    Confirm
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
           
           {/* Map Popup */}
           {showMapPopup && selectedMapAlert && (
@@ -846,6 +1355,16 @@ export default function MHAZApp() {
                 <h4 className="font-semibold text-gray-700">{expandedAlert.location}</h4>
               </div>
 
+              {/* Issuing Agency - Only for Citation alerts */}
+              {expandedAlert.type === 'Citation' && (
+                <div className="flex items-center gap-2">
+                  <svg className="w-4 h-4 text-gray-600" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z"/>
+                  </svg>
+                  <span className="font-medium text-gray-700">Issued by: {expandedAlert.reportedBy}</span>
+                </div>
+              )}
+
               {/* Photos - Only for Trail alerts and up to 2 */}
               {expandedAlert.type === 'Trail' && expandedAlert.photos && expandedAlert.photos.length > 0 && (
                 <div className="space-y-2">
@@ -1074,6 +1593,335 @@ export default function MHAZApp() {
         </div>
       )}
 
+      {/* Location Confirmation Dialog */}
+      {showLocationConfirm && newAlertPin && (
+        <div className="fixed inset-0 flex items-center justify-center z-[60] p-4 pointer-events-none">
+          <div className="bg-white rounded-lg shadow-2xl border border-gray-300 p-6 w-full max-w-sm pointer-events-auto">
+            <h3 className="text-lg font-semibold text-gray-900 mb-3">Confirm Alert Location</h3>
+            <p className="text-gray-600 mb-4">
+              Is this the correct location for your alert?
+            </p>
+            <div className="bg-gray-50 p-3 rounded-lg mb-6 text-sm">
+              <div className="font-medium text-gray-700 mb-1">Coordinates:</div>
+              <div className="text-gray-600">
+                Lat: {newAlertPin.latitude.toFixed(6)}<br/>
+                Lng: {newAlertPin.longitude.toFixed(6)}
+              </div>
+            </div>
+            
+            {/* Marin County validation */}
+            {!isWithinMarinCounty(newAlertPin.longitude, newAlertPin.latitude) && (
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <svg className="w-4 h-4 text-yellow-600" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/>
+                  </svg>
+                  <span className="text-sm font-medium text-yellow-800">Location Warning</span>
+                </div>
+                <p className="text-sm text-yellow-700">
+                  This location appears to be outside Marin County. Please confirm this is correct.
+                </p>
+              </div>
+            )}
+            
+            <div className="flex gap-3">
+              <button
+                onClick={handleCancelAddingAlert}
+                className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium py-2 px-4 rounded-lg transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmLocation}
+                className="flex-1 bg-orange-500 hover:bg-orange-600 text-white font-medium py-2 px-4 rounded-lg transition-colors"
+              >
+                Confirm
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Alert Form Modal */}
+      {showAlertForm && (
+        <div className="fixed inset-0 bg-white z-50 flex flex-col max-w-md mx-auto">
+          {/* Header */}
+          <header className="bg-orange-500 text-white px-4 py-3 flex items-center justify-between">
+            <button 
+              onClick={handleCancelAddingAlert}
+              className="p-1 hover:bg-orange-600 rounded"
+            >
+              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.42-1.41L7.83 13H20v-2z"/>
+              </svg>
+            </button>
+            <h1 className="text-lg font-bold">New Alert</h1>
+            <div className="w-6"></div>
+          </header>
+
+          {/* Content */}
+          <div className="flex-1 overflow-y-auto p-4">
+            <div className="space-y-4">
+              {/* Alert Type Selection */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Alert Type *</label>
+                <div className="grid grid-cols-1 gap-2">
+                  {(['Trail', 'LEO', 'Citation'] as AlertType[]).map((type) => (
+                    <button
+                      key={type}
+                      onClick={() => setNewAlertData(prev => ({ 
+                        ...prev, 
+                        type, 
+                        category: '',
+                        agency: '',
+                        citationDate: '',
+                        citationTime: ''
+                      }))}
+                      className={`p-3 text-left rounded-lg border transition-colors ${
+                        newAlertData.type === type
+                          ? type === 'Trail'
+                            ? 'bg-orange-50 border-orange-300 text-orange-800'
+                            : type === 'LEO'
+                            ? 'bg-blue-50 border-blue-300 text-blue-800'
+                            : 'bg-red-50 border-red-300 text-red-800'
+                          : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                          newAlertData.type === type
+                            ? type === 'Trail'
+                              ? 'bg-orange-100'
+                              : type === 'LEO'
+                              ? 'bg-blue-100'
+                              : 'bg-red-100'
+                            : 'bg-gray-100'
+                        }`}>
+                          {type === 'Trail' && (
+                            <svg className={`w-4 h-4 ${newAlertData.type === type ? 'text-orange-600' : 'text-gray-600'}`} fill="currentColor" viewBox="0 0 24 24">
+                              <path d="M5 20.5c-2.2 0-4-1.8-4-4s1.8-4 4-4 4 1.8 4 4-1.8 4-4 4zm0-6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/>
+                              <path d="M19 20.5c-2.2 0-4-1.8-4-4s1.8-4 4-4 4 1.8 4 4-1.8 4-4 4zm0-6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/>
+                              <path d="M8.5 12.5l6-6" stroke="currentColor" strokeWidth="1.5" fill="none"/>
+                              <path d="M14.5 6.5l4 4" stroke="currentColor" strokeWidth="1.5" fill="none"/>
+                              <path d="M12 6.5c0-.8.7-1.5 1.5-1.5s1.5.7 1.5 1.5-.7 1.5-1.5 1.5-1.5-.7-1.5-1.5z"/>
+                              <rect x="11" y="8" width="2" height="6" rx="1"/>
+                            </svg>
+                          )}
+                          {type === 'LEO' && (
+                            <svg className={`w-4 h-4 ${newAlertData.type === type ? 'text-blue-600' : 'text-gray-600'}`} fill="currentColor" viewBox="0 0 24 24">
+                              <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z"/>
+                            </svg>
+                          )}
+                          {type === 'Citation' && (
+                            <svg className={`w-4 h-4 ${newAlertData.type === type ? 'text-red-600' : 'text-gray-600'}`} fill="currentColor" viewBox="0 0 24 24">
+                              <path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 2 2h8c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/>
+                            </svg>
+                          )}
+                        </div>
+                        <div>
+                          <div className="font-medium">{type} Alert</div>
+                          <div className="text-sm opacity-75">
+                            {type === 'Trail' && 'Report trail conditions and hazards'}
+                            {type === 'LEO' && 'Report law enforcement activity'}
+                            {type === 'Citation' && 'Report citation incidents'}
+                          </div>
+                        </div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Dynamic form content based on alert type */}
+              {newAlertData.type && (
+                <div className="space-y-4">
+                  {/* Trail Alert Form */}
+                  {newAlertData.type === 'Trail' && (
+                    <>
+                      {/* Category Selection for Trail Alerts */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Type *</label>
+                        <select
+                          value={newAlertData.category}
+                          onChange={(e) => setNewAlertData(prev => ({ ...prev, category: e.target.value }))}
+                          className="w-full p-3 text-sm text-gray-700 border border-gray-300 rounded-lg focus:outline-none focus:border-orange-500"
+                        >
+                          <option value="">Select type...</option>
+                          <option value="Downed tree/object blocking trail">Downed tree/object blocking trail</option>
+                          <option value="Maintenance/construction">Maintenance/construction</option>
+                          <option value="Dangerous conditions">Dangerous conditions</option>
+                          <option value="Wild animal">Wild animal</option>
+                          <option value="Other">Other</option>
+                        </select>
+                      </div>
+                    </>
+                  )}
+
+                  {/* LEO Alert Form */}
+                  {newAlertData.type === 'LEO' && (
+                    <>
+                      {/* Agency Selection for LEO Alerts */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Agency *</label>
+                        <select
+                          value={newAlertData.agency}
+                          onChange={(e) => setNewAlertData(prev => ({ ...prev, agency: e.target.value, category: e.target.value }))}
+                          className="w-full p-3 text-sm text-gray-700 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
+                        >
+                          <option value="">Select agency...</option>
+                          <option value="Sheriff">Sheriff</option>
+                          <option value="Marin Water District">Marin Water District</option>
+                          <option value="CA State Parks">CA State Parks</option>
+                          <option value="National Park Service">National Park Service</option>
+                          <option value="Marin Open Space">Marin Open Space</option>
+                          <option value="Local PD">Local PD</option>
+                          <option value="CHP">CHP</option>
+                          <option value="Other">Other</option>
+                        </select>
+                      </div>
+                    </>
+                  )}
+
+                  {/* Citation Alert Form */}
+                  {newAlertData.type === 'Citation' && (
+                    <>
+                      {/* Agency Selection for Citation */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Agency *</label>
+                        <select
+                          value={newAlertData.agency}
+                          onChange={(e) => setNewAlertData(prev => ({ ...prev, agency: e.target.value, category: 'Citation Issued' }))}
+                          className="w-full p-3 text-sm text-gray-700 border border-gray-300 rounded-lg focus:outline-none focus:border-red-500"
+                        >
+                          <option value="">Select agency...</option>
+                          <option value="Sheriff">Sheriff</option>
+                          <option value="Marin Water District">Marin Water District</option>
+                          <option value="CA State Parks">CA State Parks</option>
+                          <option value="National Park Service">National Park Service</option>
+                          <option value="Marin Open Space">Marin Open Space</option>
+                          <option value="Local PD">Local PD</option>
+                          <option value="CHP">CHP</option>
+                          <option value="Other">Other</option>
+                        </select>
+                      </div>
+
+                      {/* Date and Time for Citation */}
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Date Issued *</label>
+                          <input
+                            type="date"
+                            value={newAlertData.citationDate}
+                            max={new Date().toISOString().split("T")[0]}
+                            onChange={(e) => setNewAlertData(prev => ({ ...prev, citationDate: e.target.value }))}
+                            className="w-full p-3 text-sm text-gray-700 border border-gray-300 rounded-lg focus:outline-none focus:border-red-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Time Issued *</label>
+                          <select
+                            value={newAlertData.citationTime}
+                            onChange={(e) => setNewAlertData(prev => ({ ...prev, citationTime: e.target.value }))}
+                            className="w-full p-3 text-sm text-gray-700 border border-gray-300 rounded-lg focus:outline-none focus:border-red-500"
+                          >
+                            <option value="">Select time...</option>
+                            {Array.from({ length: 96 }, (_, i) => {
+                              const hour = Math.floor(i / 4);
+                              const minute = (i % 4) * 15;
+                              const period = hour < 12 ? 'AM' : 'PM';
+                              const displayHour = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
+                              const timeString = `${displayHour}:${minute.toString().padStart(2, '0')} ${period}`;
+                              return (
+                                <option key={i} value={timeString}>
+                                  {timeString}
+                                </option>
+                              );
+                            })}
+                          </select>
+                        </div>
+                      </div>
+                    </>
+                  )}
+
+                  {/* Common Fields */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Trail or Location * <span className="text-gray-500">({newAlertData.location.length}/75)</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={newAlertData.location}
+                      onChange={(e) => {
+                        if (e.target.value.length <= 75) {
+                          setNewAlertData(prev => ({ ...prev, location: e.target.value }));
+                        }
+                      }}
+                      className="w-full p-3 text-sm text-gray-700 border border-gray-300 rounded-lg focus:outline-none focus:border-orange-500"
+                      placeholder="Enter trail or location name"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Description * <span className="text-gray-500">({newAlertData.description.length}/300)</span>
+                    </label>
+                    <textarea
+                      value={newAlertData.description}
+                      onChange={(e) => {
+                        if (e.target.value.length <= 300) {
+                          setNewAlertData(prev => ({ ...prev, description: e.target.value }));
+                        }
+                      }}
+                      className="w-full p-3 text-sm text-gray-700 border border-gray-300 rounded-lg focus:outline-none focus:border-orange-500"
+                      rows={4}
+                      placeholder="Describe the alert in detail"
+                    />
+                  </div>
+
+                  {/* Photo Upload - Only for Trail alerts */}
+                  {newAlertData.type === 'Trail' && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Photos (up to 2)
+                      </label>
+                      <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
+                        <svg className="w-8 h-8 text-gray-400 mx-auto mb-2" fill="currentColor" viewBox="0 0 24 24">
+                          <path d="M9 16h6v-6h4l-7-7-7 7h4zm-4 2h14v2H5z"/>
+                        </svg>
+                        <p className="text-sm text-gray-600">Click to upload photos</p>
+                        <p className="text-xs text-gray-500 mt-1">PNG, JPG up to 10MB each</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Footer */}
+          <div className="p-4 border-t border-gray-200">
+            <div className="flex gap-3">
+              <button
+                onClick={handleCancelAddingAlert}
+                className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium py-3 px-4 rounded-lg transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSubmitAlert}
+                disabled={!newAlertData.type || !newAlertData.location || !newAlertData.description || 
+                         (newAlertData.type === 'Trail' && !newAlertData.category) ||
+                         (newAlertData.type === 'LEO' && !newAlertData.agency) ||
+                         (newAlertData.type === 'Citation' && (!newAlertData.agency || !newAlertData.citationDate || !newAlertData.citationTime))}
+                className="flex-1 bg-orange-500 hover:bg-orange-600 disabled:bg-gray-300 text-white font-medium py-3 px-4 rounded-lg transition-colors"
+              >
+                Submit Alert
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Account Modal */}
       {showAccountModal && (
         <div className="fixed top-8 left-4 right-4 bottom-8 z-[60] bg-white rounded-lg shadow-xl border border-gray-200 max-w-md mx-auto flex flex-col">
@@ -1158,6 +2006,24 @@ export default function MHAZApp() {
                       className="w-full p-3 text-sm text-gray-700 border border-gray-300 rounded-lg focus:outline-none focus:border-orange-500"
                       placeholder="Enter your location"
                     />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Change Password</label>
+                    <input
+                      type="password"
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      className="w-full p-3 text-sm text-gray-700 border border-gray-300 rounded-lg focus:outline-none focus:border-orange-500 mb-3"
+                      placeholder="Enter new password"
+                    />
+                    <input
+                      type="password"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      className="w-full p-3 text-sm text-gray-700 border border-gray-300 rounded-lg focus:outline-none focus:border-orange-500"
+                      placeholder="Confirm new password"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">Leave blank to keep current password</p>
                   </div>
                 </div>
 

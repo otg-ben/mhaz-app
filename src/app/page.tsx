@@ -417,11 +417,15 @@ export default function MHAZApp() {
 
   // Load alerts from database
   const loadAlerts = async () => {
+    console.log('🔄 Loading alerts from database...');
     try {
       const { data, error } = await supabase
         .from('alerts')
         .select('*')
         .order('reported_at', { ascending: false });
+
+      console.log('📊 Raw alerts data from DB:', data);
+      console.log('❌ Alerts error (if any):', error);
 
       if (error) {
         console.error('Error loading alerts:', error);
@@ -429,6 +433,7 @@ export default function MHAZApp() {
       }
 
       if (data) {
+        console.log(`📈 Found ${data.length} alerts in database`);
         const formattedAlerts: Alert[] = data.map(alert => ({
           id: alert.id,
           type: alert.type,
@@ -443,7 +448,9 @@ export default function MHAZApp() {
           photos: alert.photos || undefined
         }));
 
+        console.log('📋 Setting formatted alerts in state:', formattedAlerts);
         setAlerts(formattedAlerts);
+        console.log('✅ Alerts loaded successfully!');
       }
     } catch (err) {
       console.error('Alerts load error:', err);

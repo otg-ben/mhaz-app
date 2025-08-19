@@ -1332,6 +1332,9 @@ export default function MHAZApp() {
           {isLoggedIn && (
             <button onClick={async () => {
               console.log('🔬 DIRECT TEST: Starting...');
+              console.log('🔧 Supabase URL:', process.env.NEXT_PUBLIC_SUPABASE_URL);
+              console.log('🔧 Supabase Key:', process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? 'EXISTS' : 'MISSING');
+              console.log('🔧 Supabase client:', supabase);
               const result = await supabase.from('alerts').select('*');
               console.log('🔬 DIRECT TEST Result:', result);
             }} className="bg-red-600 text-white px-2 py-1 text-xs rounded hover:bg-red-700">

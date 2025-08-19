@@ -1329,30 +1329,6 @@ export default function MHAZApp() {
       <header className="fixed-header bg-orange-500 text-white px-4 py-3 flex items-center justify-between flex-shrink-0">
         <div className="flex items-center gap-3">
           <h1 className="text-lg font-bold">MHAZ</h1>
-          {isLoggedIn && (
-            <button onClick={async () => {
-              console.log('🔬 DIRECT TEST: Starting...');
-              console.log('🔧 Supabase URL:', process.env.NEXT_PUBLIC_SUPABASE_URL);
-              console.log('🔧 Supabase Key:', process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? 'EXISTS' : 'MISSING');
-              console.log('🔧 Supabase client:', supabase);
-              try {
-                console.log('🚀 Testing auth first...');
-                const { data: { user } } = await supabase.auth.getUser();
-                console.log('✅ Auth works:', user?.email);
-                
-                console.log('🚀 Now testing database query...');
-                const result = await Promise.race([
-                  supabase.from('alerts').select('*'),
-                  new Promise((_, reject) => setTimeout(() => reject(new Error('TIMEOUT')), 5000))
-                ]);
-                console.log('🔬 DIRECT TEST Result:', result);
-              } catch (err) {
-                console.error('🚨 Query failed:', err);
-              }
-            }} className="bg-red-600 text-white px-2 py-1 text-xs rounded hover:bg-red-700">
-              TEST
-            </button>
-          )}
         </div>
         <div className="flex items-center gap-3">
           {viewMode === 'map' && (

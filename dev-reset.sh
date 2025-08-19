@@ -23,10 +23,10 @@ rm -rf .swc
 # rm -rf node_modules/.cache
 
 echo "🚀 Starting fresh development server..."
-if [ "$1" = "stable" ]; then
-    echo "Using stable mode (without Turbopack)..."
-    npm run dev:stable
-else
+if [ "$1" = "turbo" ]; then
     echo "Using Turbopack mode..."
+    npm run dev:turbo
+else
+    echo "Using stable mode (without Turbopack)..."
     npm run dev
 fi

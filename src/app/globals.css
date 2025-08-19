@@ -125,3 +125,17 @@ body {
   background: white;
   z-index: 1101;
 }
+
+/* Dropdown and overlay z-index management */
+.dropdown-overlay {
+  z-index: 1050; /* Above fixed navigation (1000/999) */
+}
+
+.custom-modal-overlay {
+  z-index: 1060; /* Above dropdowns */
+}
+
+/* Ensure any other dropdowns are properly layered */
+[role="listbox"], [role="menu"], .dropdown-menu {
+  z-index: 1050 !important;
+}

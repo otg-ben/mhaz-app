@@ -18,31 +18,33 @@
    npm run dev:clean
    ```
 
-2. **Full Reset Script** (Turbopack):
+2. **Full Reset Script** (Stable Mode - Recommended):
    ```bash
    npm run dev:reset
    # or directly: ./dev-reset.sh
    ```
 
-3. **Stable Mode Reset** (without Turbopack - more stable):
-   ```bash
-   ./dev-reset.sh stable
-   ```
-
-4. **Manual Reset**:
+3. **Manual Reset**:
    ```bash
    pkill -f "next dev"
    rm -rf .next .swc
    npm run dev
    ```
 
+4. **Nuclear Reset** (if persistent issues):
+   ```bash
+   rm -rf .next .swc node_modules
+   npm install
+   npm run dev
+   ```
+
 ### Development Commands
 
-- `npm run dev` - Standard dev server (with Turbopack)
-- `npm run dev:stable` - Stable dev server (without Turbopack - more reliable)
+- `npm run dev` - Standard dev server (stable mode - recommended)
+- `npm run dev:turbo` - Turbopack dev server (experimental, prone to manifest corruption)
 - `npm run dev:clean` - Clean restart (removes .next and .swc)
-- `npm run dev:reset` - Full reset script with process cleanup
-- `./dev-reset.sh stable` - Reset and start in stable mode
+- `npm run dev:reset` - Full reset script (defaults to stable mode)
+- `./dev-reset.sh turbo` - Reset and start with Turbopack (not recommended)
 - `npm run build` - Production build
 - `npm run lint` - Linting
 
@@ -53,7 +55,23 @@
 - **Modal Layout**: Uses `.modal-container`, `.modal-content`, `.modal-footer` classes
 - **Content Padding**: Main content has 128px top padding (64px header + 64px secondary nav)
 
-### CSS Classes
+### Business Rules
+
+- **Alert Status**: Only Trail alerts have Active/Resolved status labels
+- **LEO Alerts**: Law enforcement alerts have no status (they're informational)
+- **Citation Alerts**: Citation alerts have no status (they're historical records)
+- **Resolve Functionality**: Only Trail alerts can be marked as resolved
+- **Show in Map View Button**: Only appears when viewing alert from list view (not from map view)
+
+### Alert Resolution Process
+
+1. "Mark as Resolved" button appears only for Active Trail alerts
+2. Click shows confirmation dialog
+3. "Resolve" button persists change to database with loading indicator
+4. Local state updates only after successful database update
+5. Alert status changes from "Active" to "Resolved"
+
+### CSS Classes & Z-Index Hierarchy
 
 - `.app-container` - Responsive container (full width mobile, max 1500px desktop)
 - `.fixed-header` - Fixed top navigation (z-index: 1000)
@@ -63,6 +81,8 @@
 - `.modal-container` - Full-screen modal container (z-index: 1100)
 - `.modal-content` - Scrollable modal content
 - `.modal-footer` - Fixed modal footer (z-index: 1101)
+- Dropdowns and overlays (z-index: 1050-1060) - Above fixed navigation
+- User menu (z-index: 1055) - Above dropdowns
 
 ### Modal Navigation
 

@@ -214,6 +214,7 @@ export default function MHAZApp() {
   const [expandedAlert, setExpandedAlert] = useState<Alert | null>(null);
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [showResolveDialog, setShowResolveDialog] = useState(false);
+  const [isResolvingAlert, setIsResolvingAlert] = useState(false);
   const [expandedPhoto, setExpandedPhoto] = useState<string | null>(null);
   const [dateFilterPreset, setDateFilterPreset] = useState<DateFilterPreset>('last 14d');
   const [customDateRange, setCustomDateRange] = useState<DateRange | null>(null);
@@ -368,7 +369,7 @@ export default function MHAZApp() {
         const formattedAlerts: Alert[] = data.map(alert => ({
           id: alert.id,
           type: alert.type,
-          status: alert.status,
+          status: alert.type === 'Trail' ? alert.status : undefined,
           category: alert.category,
           location: alert.location,
           description: alert.description,
@@ -462,15 +463,76 @@ export default function MHAZApp() {
     );
   };
 
-  const handleResolveAlert = () => {
-    if (expandedAlert) {
-      setAlerts(prev => prev.map(alert => 
-        alert.id === expandedAlert.id 
-          ? { ...alert, status: 'Resolved' as AlertStatus }
-          : alert
-      ));
-      setExpandedAlert(prev => prev ? { ...prev, status: 'Resolved' as AlertStatus } : null);
-      setShowResolveDialog(false);
+  const handleResolveAlert = async () => {
+    if (expandedAlert && expandedAlert.type === 'Trail') {
+      setIsResolvingAlert(true);
+      try {
+        console.log('Current alert being resolved:', expandedAlert);
+        console.log('Available alert fields:', Object.keys(expandedAlert));
+        
+        // Check if any resolved alerts exist at all
+        const { data: existingResolved, error: queryError } = await supabase
+          .from('alerts')
+          .select('*')
+          .eq('status', 'Resolved')
+          .limit(5);
+          
+        console.log('Query error:', queryError);
+        console.log('Existing resolved alerts:', existingResolved);
+        console.log('Number of resolved alerts found:', existingResolved?.length || 0);
+        
+        // Also get the schema information
+        const { data: schemaInfo, error: schemaError } = await supabase
+          .from('alerts')
+          .select('*')
+          .limit(0);
+          
+        console.log('Schema query error:', schemaError);
+        
+        // The issue is that database column names might be different from JS field names
+        // Let's get the raw database column names by doing a simple select first
+        const { data: sampleAlert, error: sampleError } = await supabase
+          .from('alerts')
+          .select('*')
+          .limit(1)
+          .single();
+          
+        console.log('Sample alert from database (raw column names):', sampleAlert);
+        console.log('Sample query error:', sampleError);
+        
+        // Get current user ID
+        const { data: { user } } = await supabase.auth.getUser();
+        
+        // Update in database with resolved fields
+        const { error } = await supabase
+          .from('alerts')
+          .update({ 
+            status: 'Resolved',
+            resolved_at: new Date().toISOString(),
+            resolved_by: user?.id || null
+          })
+          .eq('id', expandedAlert.id);
+
+        if (error) {
+          console.error('Error updating alert status:', error);
+          alert(`Failed to resolve alert: ${error.message}`);
+          return;
+        }
+
+        // Update local state only after successful database update
+        setAlerts(prev => prev.map(alert => 
+          alert.id === expandedAlert.id 
+            ? { ...alert, status: 'Resolved' as AlertStatus }
+            : alert
+        ));
+        setExpandedAlert(prev => prev ? { ...prev, status: 'Resolved' as AlertStatus } : null);
+        setShowResolveDialog(false);
+      } catch (err) {
+        console.error('Error resolving alert:', err);
+        alert('Failed to resolve alert. Please try again.');
+      } finally {
+        setIsResolvingAlert(false);
+      }
     }
   };
 
@@ -1186,7 +1248,6 @@ export default function MHAZApp() {
         <div className="flex items-center justify-between">
           <div className="flex gap-1">
             {(['Trail', 'LEO', 'Citation'] as AlertType[]).map((type) => {
-              const count = alerts.filter(alert => alert.type === type).length;
               const isSelected = selectedAlertTypes.includes(type);
               return (
                 <button
@@ -1204,12 +1265,8 @@ export default function MHAZApp() {
                 >
                   {type === 'Trail' && (
                     <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M5 20.5c-2.2 0-4-1.8-4-4s1.8-4 4-4 4 1.8 4 4-1.8 4-4 4zm0-6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/>
-                      <path d="M19 20.5c-2.2 0-4-1.8-4-4s1.8-4 4-4 4 1.8 4 4-1.8 4-4 4zm0-6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/>
-                      <path d="M8.5 12.5l6-6" stroke="currentColor" strokeWidth="1.5" fill="none"/>
-                      <path d="M14.5 6.5l4 4" stroke="currentColor" strokeWidth="1.5" fill="none"/>
-                      <path d="M12 6.5c0-.8.7-1.5 1.5-1.5s1.5.7 1.5 1.5-.7 1.5-1.5 1.5-1.5-.7-1.5-1.5z"/>
-                      <rect x="11" y="8" width="2" height="6" rx="1"/>
+                      <path d="M12 2l10 20H2L12 2z"/>
+                      <path d="M8 12l4-6 4 6H8z" fill="white" opacity="0.3"/>
                     </svg>
                   )}
                   {type === 'LEO' && (
@@ -1222,7 +1279,7 @@ export default function MHAZApp() {
                       <path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 2 2h8c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/>
                     </svg>
                   )}
-                  {type} ({count})
+                  {type}
                 </button>
               );
             })}
@@ -1588,7 +1645,7 @@ export default function MHAZApp() {
 
       {/* User Menu - Floating Centered */}
       {showUserMenu && (
-        <div ref={userMenuRef} className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-[55] bg-white rounded-lg shadow-xl border border-gray-200 w-64">
+        <div ref={userMenuRef} className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-[1055] bg-white rounded-lg shadow-xl border border-gray-200 w-64">
             <div className="p-4 space-y-2">
               <div className="text-center pb-3 border-b border-gray-200">
                 <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-2">
@@ -1791,8 +1848,8 @@ export default function MHAZApp() {
 
       {/* Resolve Confirmation Dialog */}
       {showResolveDialog && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60] p-4">
-          <div className="bg-white rounded-lg p-6 w-full max-w-sm">
+        <div className="fixed inset-0 flex items-center justify-center z-[1200] p-4 pointer-events-none">
+          <div className="pointer-events-auto bg-white rounded-lg shadow-xl border p-6 w-full max-w-sm">
             <h3 className="text-lg font-semibold text-gray-900 mb-3">Confirm Resolution</h3>
             <p className="text-gray-600 mb-6">
               Are you sure you want to mark this trail alert as resolved? This action confirms that the issue has been taken care of.
@@ -1806,9 +1863,19 @@ export default function MHAZApp() {
               </button>
               <button
                 onClick={handleResolveAlert}
-                className="flex-1 bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-lg transition-colors"
+                disabled={isResolvingAlert}
+                className={`flex-1 font-medium py-2 px-4 rounded-lg transition-colors flex items-center justify-center gap-2 ${
+                  isResolvingAlert 
+                    ? 'bg-gray-400 cursor-not-allowed' 
+                    : 'bg-green-600 hover:bg-green-700'
+                } text-white`}
               >
-                Resolve
+                {isResolvingAlert && (
+                  <svg className="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                )}
+                {isResolvingAlert ? 'Resolving...' : 'Resolve'}
               </button>
             </div>
           </div>
@@ -1817,7 +1884,7 @@ export default function MHAZApp() {
 
       {/* Date Filter Dropdown */}
       {showDateDropdown && (
-        <div ref={dropdownRef} className="absolute top-12 right-4 z-50 bg-white rounded-lg shadow-lg border border-gray-200 w-48">
+        <div ref={dropdownRef} className="absolute top-12 right-4 z-[1050] bg-white rounded-lg shadow-lg border border-gray-200 w-48">
           <div className="p-2 space-y-1">
             {[
               { value: 'today', label: 'Today' },
@@ -1854,7 +1921,7 @@ export default function MHAZApp() {
 
       {/* Custom Date Range Modal */}
       {showCustomDateModal && (
-        <div ref={customModalRef} className="absolute top-16 right-4 z-[60] bg-white rounded-lg shadow-xl border border-gray-200 w-80">
+        <div ref={customModalRef} className="absolute top-16 right-4 z-[1060] bg-white rounded-lg shadow-xl border border-gray-200 w-80">
           <div className="p-4 space-y-4">
             <h3 className="text-lg font-semibold text-gray-900">Custom Date Range</h3>
             
@@ -2053,12 +2120,8 @@ export default function MHAZApp() {
                         }`}>
                           {type === 'Trail' && (
                             <svg className={`w-4 h-4 ${newAlertData.type === type ? 'text-orange-600' : 'text-gray-600'}`} fill="currentColor" viewBox="0 0 24 24">
-                              <path d="M5 20.5c-2.2 0-4-1.8-4-4s1.8-4 4-4 4 1.8 4 4-1.8 4-4 4zm0-6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/>
-                              <path d="M19 20.5c-2.2 0-4-1.8-4-4s1.8-4 4-4 4 1.8 4 4-1.8 4-4 4zm0-6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/>
-                              <path d="M8.5 12.5l6-6" stroke="currentColor" strokeWidth="1.5" fill="none"/>
-                              <path d="M14.5 6.5l4 4" stroke="currentColor" strokeWidth="1.5" fill="none"/>
-                              <path d="M12 6.5c0-.8.7-1.5 1.5-1.5s1.5.7 1.5 1.5-.7 1.5-1.5 1.5-1.5-.7-1.5-1.5z"/>
-                              <rect x="11" y="8" width="2" height="6" rx="1"/>
+                              <path d="M12 2l10 20H2L12 2z"/>
+                              <path d="M8 12l4-6 4 6H8z" fill="white" opacity="0.3"/>
                             </svg>
                           )}
                           {type === 'LEO' && (

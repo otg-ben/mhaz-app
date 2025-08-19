@@ -947,7 +947,7 @@ export default function MHAZApp() {
   // Show authentication screens if not logged in
   if (!isLoggedIn) {
     return (
-      <div className="h-screen bg-gray-50 flex items-center justify-center max-w-md mx-auto">
+      <div className="h-screen bg-gray-50 flex items-center justify-center app-container">
         <div className="w-full max-w-sm bg-white rounded-lg shadow-lg p-6">
           {/* Logo */}
           <div className="text-center mb-6">
@@ -1154,9 +1154,9 @@ export default function MHAZApp() {
   }
 
   return (
-    <div className="h-screen bg-gray-50 flex flex-col max-w-md mx-auto relative">
+    <div className="app-container h-screen bg-gray-50 flex flex-col relative">
       {/* Orange Header Bar */}
-      <header className="bg-orange-500 text-white px-4 py-3 flex items-center justify-between flex-shrink-0">
+      <header className="fixed-header bg-orange-500 text-white px-4 py-3 flex items-center justify-between flex-shrink-0">
         <h1 className="text-lg font-bold">MHAZ</h1>
         <div className="flex items-center gap-3">
           {viewMode === 'map' && (
@@ -1182,7 +1182,7 @@ export default function MHAZApp() {
       </header>
 
       {/* Alert Type Toggles and View Toggle */}
-      <div className="bg-white px-4 py-3 border-b border-gray-200 flex-shrink-0">
+      <div className="fixed-secondary-nav bg-white px-4 py-3 border-b border-gray-200 flex-shrink-0">
         <div className="flex items-center justify-between">
           <div className="flex gap-1">
             {(['Trail', 'LEO', 'Citation'] as AlertType[]).map((type) => {
@@ -1254,7 +1254,7 @@ export default function MHAZApp() {
       </div>
 
       {/* Content Area - Map or List */}
-      <div className="flex-1 flex flex-col min-h-0">
+      <div className="main-content flex-1 flex flex-col min-h-0">
         {viewMode === 'map' ? (
           <div className="flex-1 relative">
           <Map
@@ -1573,7 +1573,7 @@ export default function MHAZApp() {
       </div>
 
       {/* Bottom Navigation - Static */}
-      <nav className="bg-gray-100 border-t border-gray-200 px-4 py-3 flex-shrink-0">
+      <nav className="fixed-footer bg-gray-100 border-t border-gray-200 px-4 py-3 flex-shrink-0">
         <div className="flex justify-center relative">
           <button 
             onClick={() => setShowUserMenu(!showUserMenu)}
@@ -1625,7 +1625,7 @@ export default function MHAZApp() {
 
       {/* Expanded Alert View - Full Modal */}
       {expandedAlert && (
-        <div className="fixed inset-0 bg-white z-50 flex flex-col max-w-md mx-auto">
+        <div className="fixed inset-0 bg-white z-50 modal-container app-container">
           {/* Header */}
           <header className="bg-orange-500 text-white px-4 py-3 flex items-center justify-between">
             <button 
@@ -1633,7 +1633,8 @@ export default function MHAZApp() {
                 setExpandedAlert(null);
                 setExpandedFromMap(false);
               }} 
-              className="p-1 hover:bg-orange-600 rounded"
+              className="p-2 hover:bg-orange-600 rounded-full transition-colors flex items-center justify-center min-w-[40px] min-h-[40px]"
+              title="Back to map"
             >
               <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
                 <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.42-1.41L7.83 13H20v-2z"/>
@@ -1644,7 +1645,7 @@ export default function MHAZApp() {
           </header>
 
           {/* Content */}
-          <div className="flex-1 overflow-y-auto p-4">
+          <div className="modal-content p-4">
             <div className="space-y-4">
               {/* Alert Header */}
               <div className="flex items-start justify-between">
@@ -1996,12 +1997,13 @@ export default function MHAZApp() {
 
       {/* Alert Form Modal */}
       {showAlertForm && (
-        <div className="fixed inset-0 bg-white z-50 flex flex-col max-w-md mx-auto">
+        <div className="fixed inset-0 bg-white z-50 modal-container app-container">
           {/* Header */}
           <header className="bg-orange-500 text-white px-4 py-3 flex items-center justify-between">
             <button 
               onClick={handleCancelAddingAlert}
-              className="p-1 hover:bg-orange-600 rounded"
+              className="p-2 hover:bg-orange-600 rounded-full transition-colors flex items-center justify-center min-w-[40px] min-h-[40px]"
+              title="Cancel and go back"
             >
               <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
                 <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.42-1.41L7.83 13H20v-2z"/>
@@ -2012,7 +2014,7 @@ export default function MHAZApp() {
           </header>
 
           {/* Content */}
-          <div className="flex-1 overflow-y-auto p-4">
+          <div className="modal-content p-4">
             <div className="space-y-4">
               {/* Alert Type Selection */}
               <div>
@@ -2290,7 +2292,7 @@ export default function MHAZApp() {
           </div>
 
           {/* Footer */}
-          <div className="p-4 border-t border-gray-200">
+          <div className="modal-footer p-4">
             <div className="flex gap-3">
               <button
                 onClick={handleCancelAddingAlert}
@@ -2315,10 +2317,10 @@ export default function MHAZApp() {
 
       {/* Account Modal */}
       {showAccountModal && (
-        <div className="fixed top-8 left-4 right-4 bottom-8 z-[60] bg-white rounded-lg shadow-xl border border-gray-200 max-w-md mx-auto flex flex-col">
+        <div className="fixed top-8 left-4 right-4 bottom-8 z-[60] bg-white rounded-lg shadow-xl border border-gray-200 app-container flex flex-col">
           {/* Header */}
           <header className="bg-orange-500 text-white px-4 py-3 flex items-center justify-between rounded-t-lg">
-            <button onClick={handleCancelAccount} className="p-1 hover:bg-orange-600 rounded">
+            <button onClick={handleCancelAccount} className="p-2 hover:bg-orange-600 rounded-full transition-colors flex items-center justify-center min-w-[40px] min-h-[40px]" title="Close account settings">
               <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
                 <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.42-1.41L7.83 13H20v-2z"/>
               </svg>
@@ -2354,7 +2356,7 @@ export default function MHAZApp() {
           </div>
 
           {/* Content */}
-          <div className="flex-1 overflow-y-auto p-4">
+          <div className="modal-content p-4">
             {activeAccountTab === 'profile' ? (
               <div className="space-y-4">
                 <div className="text-center pb-4">

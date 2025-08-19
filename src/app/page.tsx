@@ -430,14 +430,27 @@ export default function MHAZApp() {
     try {
       console.log('📡 Making Supabase query...');
       
-      // Add timeout wrapper to detect hanging queries
+      // Test simple connection first - this bypasses potential RLS issues
+      console.log('🧪 Testing basic connectivity with count query...');
+      const { count: testCount, error: testError } = await supabase
+        .from('alerts')
+        .select('*', { count: 'exact', head: true });
+      
+      console.log('🧪 Basic connectivity test result:', { count: testCount, error: testError });
+      
+      if (testError) {
+        console.error('❌ Basic connectivity failed:', testError);
+        throw testError;
+      }
+      
+      // Now try the full query with timeout
       const queryPromise = supabase
         .from('alerts')
         .select('*')
         .order('reported_at', { ascending: false });
       
       const timeoutPromise = new Promise<never>((_, reject) => {
-        setTimeout(() => reject(new Error('Query timeout after 10 seconds')), 10000);
+        setTimeout(() => reject(new Error('Query timeout after 15 seconds')), 15000);
       });
       
       const result = await Promise.race([queryPromise, timeoutPromise]);

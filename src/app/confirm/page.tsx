@@ -4,6 +4,9 @@ import { useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 
+// Prevent static generation for this page
+export const dynamic = 'force-dynamic'
+
 export default function ConfirmPage() {
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading')
   const [message, setMessage] = useState('')

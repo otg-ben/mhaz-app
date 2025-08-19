@@ -726,7 +726,7 @@ export default function MHAZApp() {
       if (data.user && !data.session) {
         // Email confirmation required
         alert('Please check your email and click the confirmation link to complete your account setup.');
-      } else if (data.session) {
+      } else if (data.session && data.user) {
         // User is immediately logged in (if email confirmation is disabled)
         // Create profile as fallback in case trigger didn't work
         const { error: profileError } = await supabase

@@ -1327,7 +1327,18 @@ export default function MHAZApp() {
     <div className="app-container h-screen bg-gray-50 flex flex-col relative">
       {/* Orange Header Bar */}
       <header className="fixed-header bg-orange-500 text-white px-4 py-3 flex items-center justify-between flex-shrink-0">
-        <h1 className="text-lg font-bold">MHAZ</h1>
+        <div className="flex items-center gap-3">
+          <h1 className="text-lg font-bold">MHAZ</h1>
+          {isLoggedIn && (
+            <button onClick={async () => {
+              console.log('🔬 DIRECT TEST: Starting...');
+              const result = await supabase.from('alerts').select('*');
+              console.log('🔬 DIRECT TEST Result:', result);
+            }} className="bg-red-600 text-white px-2 py-1 text-xs rounded hover:bg-red-700">
+              TEST
+            </button>
+          )}
+        </div>
         <div className="flex items-center gap-3">
           {viewMode === 'map' && (
             <button 

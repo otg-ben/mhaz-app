@@ -1336,7 +1336,11 @@ export default function MHAZApp() {
               console.log('🔧 Supabase Key:', process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? 'EXISTS' : 'MISSING');
               console.log('🔧 Supabase client:', supabase);
               try {
-                console.log('🚀 About to make query...');
+                console.log('🚀 Testing auth first...');
+                const { data: { user } } = await supabase.auth.getUser();
+                console.log('✅ Auth works:', user?.email);
+                
+                console.log('🚀 Now testing database query...');
                 const result = await Promise.race([
                   supabase.from('alerts').select('*'),
                   new Promise((_, reject) => setTimeout(() => reject(new Error('TIMEOUT')), 5000))

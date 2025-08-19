@@ -418,12 +418,30 @@ export default function MHAZApp() {
   // Load alerts from database
   const loadAlerts = async () => {
     console.log('🔄 Loading alerts from database...');
+    
+    // Debug environment variables in production
+    console.log('🔧 Environment Debug:', {
+      supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL ? 'SET' : 'MISSING',
+      supabaseKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? 'SET' : 'MISSING',
+      urlPreview: process.env.NEXT_PUBLIC_SUPABASE_URL?.substring(0, 30) + '...',
+      keyPreview: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.substring(0, 20) + '...'
+    });
+    
     try {
       console.log('📡 Making Supabase query...');
-      const { data, error } = await supabase
+      
+      // Add timeout wrapper to detect hanging queries
+      const queryPromise = supabase
         .from('alerts')
         .select('*')
         .order('reported_at', { ascending: false });
+      
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(() => reject(new Error('Query timeout after 10 seconds')), 10000);
+      });
+      
+      const result = await Promise.race([queryPromise, timeoutPromise]);
+      const { data, error } = result;
 
       console.log('📡 Supabase query completed');
       console.log('📊 Raw alerts data from DB:', data);

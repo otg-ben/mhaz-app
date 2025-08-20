@@ -445,14 +445,16 @@ export default function MHAZApp() {
         console.error('❌ Basic connectivity failed:', testError);
         throw testError;
       }
-      
-      // Now try the full query with timeout
-      const queryPromise = supabase
-        .from('alerts')
-        .select('*')
-        .order('reported_at', { ascending: false });
-      
-      const timeoutPromise = new Promise<never>((_, reject) => {
+
+        const queryPromise = supabase
+            .from('alerts')
+            .select(`
+      *,
+      profiles!reported_by(username)
+    `).order('reported_at', { ascending: false });
+
+
+        const timeoutPromise = new Promise<never>((_, reject) => {
         setTimeout(() => reject(new Error('Query timeout after 15 seconds')), 15000);
       });
       
@@ -470,19 +472,19 @@ export default function MHAZApp() {
 
       if (data) {
         console.log(`📈 Found ${data.length} alerts in database`);
-        const formattedAlerts: Alert[] = data.map(alert => ({
-          id: alert.id,
-          type: alert.type,
-          status: alert.type === 'Trail' ? alert.status : undefined,
-          category: alert.category,
-          location: alert.location,
-          description: alert.description,
-          reportedBy: 'Trail User',
-          reportedAt: new Date(alert.reported_at),
-          latitude: alert.latitude,
-          longitude: alert.longitude,
-          photos: alert.photos || undefined
-        }));
+          const formattedAlerts: Alert[] = data.map(alert => ({
+              id: alert.id,
+              type: alert.type,
+              status: alert.type === 'Trail' ? alert.status : undefined,
+              category: alert.category,
+              location: alert.location,
+              description: alert.description,
+              reportedBy: alert.profiles?.username || 'Unknown User',
+              reportedAt: new Date(alert.reported_at),
+              latitude: alert.latitude,
+              longitude: alert.longitude,
+              photos: alert.photos || undefined
+          }));
 
         console.log('📋 Setting formatted alerts in state:', formattedAlerts);
         setAlerts(formattedAlerts);

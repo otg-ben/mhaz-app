@@ -27,47 +27,28 @@ export default function HomePage() {
   const { user, loading: authLoading } = useAuth()
   const { toast } = useToast()
 
-  // Auth gate — show spinner while resolving, landing screen if signed out
-  if (authLoading) {
-    return (
-      <div className="h-screen-safe flex items-center justify-center bg-base">
-        <div className="w-8 h-8 border-2 border-brand border-t-transparent rounded-full animate-spin" />
-      </div>
-    )
-  }
-
-  if (!user) {
-    return <AuthGate />
-  }
-
-  // View state
+  // All hooks must be declared before any conditional return
   const [activeView, setActiveView] = useState<'map' | 'feed'>('map')
   const [mapStyle, setMapStyle] = useState<'topo' | 'satellite'>('topo')
-
-  // Filter state — unified across map + feed
   const [activeTypes, setActiveTypes] = useState<Set<AlertType>>(new Set(ALL_TYPES))
   const [timeRange, setTimeRange] = useState<TimeRange>('14d')
   const [showResolved, setShowResolved] = useState(false)
-
   const [highlightedId, setHighlightedId] = useState<string | undefined>()
   const [flyTo, setFlyTo] = useState<{ lat: number; lng: number; v: number } | null>(null)
-
-  // Modals
   const [authOpen, setAuthOpen] = useState(false)
   const [selectedAlert, setSelectedAlert] = useState<SelectedAlert | null>(null)
   const [addAlertType, setAddAlertType] = useState<AlertType | null>(null)
   const [pendingPin, setPendingPin] = useState<{ lat: number; lng: number } | null>(null)
   const [placingPinFor, setPlacingPinFor] = useState<AlertType | null>(null)
 
-  // Map data (always fetches all types so map and feed stay in sync)
   const { data: leoData,   mutate: leoMutate }   = useSWR<{ data: LeoAlert[] }>(
-    `/api/alerts/leo?range=${timeRange}`, fetcher)
+    user ? `/api/alerts/leo?range=${timeRange}` : null, fetcher)
   const { data: trailData, mutate: trailMutate } = useSWR<{ data: TrailAlert[] }>(
-    `/api/alerts/trail?range=${timeRange}&resolved=${showResolved}`, fetcher)
+    user ? `/api/alerts/trail?range=${timeRange}&resolved=${showResolved}` : null, fetcher)
   const { data: citData,   mutate: citMutate }   = useSWR<{ data: Citation[] }>(
-    `/api/citations?range=${timeRange}`, fetcher)
+    user ? `/api/citations?range=${timeRange}` : null, fetcher)
   const { data: lostData,  mutate: lostMutate }  = useSWR<{ data: LostFoundPost[] }>(
-    `/api/lost-found?range=${timeRange}`, fetcher)
+    user ? `/api/lost-found?range=${timeRange}` : null, fetcher)
 
   const refreshAll = useCallback(() => {
     leoMutate(); trailMutate(); citMutate(); lostMutate()
@@ -82,7 +63,6 @@ export default function HomePage() {
   }, [])
 
   const handleFABSelect = (type: AlertType) => {
-    if (!user) { setAuthOpen(true); return }
     setPlacingPinFor(type)
     setActiveView('map')
   }
@@ -116,6 +96,19 @@ export default function HomePage() {
     setActiveView('map')
     setFlyTo(prev => ({ lat, lng, v: (prev?.v ?? 0) + 1 }))
   }, [])
+
+  // Auth gate — after all hooks
+  if (authLoading) {
+    return (
+      <div className="h-screen-safe flex items-center justify-center bg-base">
+        <div className="w-8 h-8 border-2 border-brand border-t-transparent rounded-full animate-spin" />
+      </div>
+    )
+  }
+
+  if (!user) {
+    return <AuthGate />
+  }
 
   return (
     <div className="h-screen-safe flex flex-col overflow-hidden">

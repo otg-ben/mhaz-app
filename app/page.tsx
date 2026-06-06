@@ -24,8 +24,21 @@ const fetcher = (url: string) => fetch(url).then(r => r.json())
 const ALL_TYPES = new Set<AlertType>(['leo', 'trail', 'citation', 'lost_found'])
 
 export default function HomePage() {
-  const { user } = useAuth()
+  const { user, loading: authLoading } = useAuth()
   const { toast } = useToast()
+
+  // Auth gate — show spinner while resolving, landing screen if signed out
+  if (authLoading) {
+    return (
+      <div className="h-screen-safe flex items-center justify-center bg-base">
+        <div className="w-8 h-8 border-2 border-brand border-t-transparent rounded-full animate-spin" />
+      </div>
+    )
+  }
+
+  if (!user) {
+    return <AuthGate />
+  }
 
   // View state
   const [activeView, setActiveView] = useState<'map' | 'feed'>('map')
@@ -188,6 +201,47 @@ export default function HomePage() {
         lng={pendingPin?.lng ?? null}
         onSuccess={handleAddSuccess}
       />
+    </div>
+  )
+}
+
+// ─── Auth Gate ────────────────────────────────────────────────────────────────
+
+function AuthGate() {
+  const [authOpen, setAuthOpen] = useState(false)
+  const [mode, setMode] = useState<'login' | 'register'>('login')
+
+  return (
+    <div className="h-screen-safe flex flex-col items-center justify-center bg-base px-6 text-center">
+      {/* Logo / wordmark */}
+      <div className="mb-8 select-none">
+        <div className="text-5xl mb-3">🚵</div>
+        <h1 className="text-3xl font-bold tracking-tight text-primary">MHAZ</h1>
+        <p className="text-sm text-secondary mt-1">Marin County Trail Alerts</p>
+      </div>
+
+      {/* Pitch */}
+      <p className="text-secondary text-sm max-w-xs mb-10 leading-relaxed">
+        Real-time LEO alerts, trail issues, citations, and lost &amp; found — posted by the Marin MTB community, for the Marin MTB community.
+      </p>
+
+      {/* Buttons */}
+      <div className="flex flex-col gap-3 w-full max-w-xs">
+        <button
+          onClick={() => { setMode('login'); setAuthOpen(true) }}
+          className="w-full py-3 rounded-2xl bg-brand text-white font-semibold text-sm hover:bg-brand/90 active:scale-95 transition-all shadow-modal"
+        >
+          Sign in
+        </button>
+        <button
+          onClick={() => { setMode('register'); setAuthOpen(true) }}
+          className="w-full py-3 rounded-2xl bg-elevated border border-border text-primary font-semibold text-sm hover:bg-border/30 active:scale-95 transition-all"
+        >
+          Create account
+        </button>
+      </div>
+
+      <AuthModal open={authOpen} onClose={() => setAuthOpen(false)} defaultMode={mode} />
     </div>
   )
 }

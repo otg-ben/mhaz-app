@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState } from 'react'
 import useSWR from 'swr'
-import { X } from 'lucide-react'
 import { timeAgo, formatDate } from '@/lib/utils'
 import { Modal } from '@/components/ui/Modal'
 import type { MhazEmail } from '@/types'

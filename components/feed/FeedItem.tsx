@@ -50,32 +50,32 @@ export function FeedItem({ type, data, onClick, onShowOnMap, commentCount = 0 }:
 
         {/* Main content */}
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-            <span className="text-base font-semibold text-primary">{getSubtitle()}</span>
+          <div className="flex items-center gap-2 mb-2 flex-wrap">
+            <span className="text-xl font-semibold text-primary">{getSubtitle()}</span>
             {isMhaz && <Badge type="mhaz" />}
             {isResolved && <Badge type="resolved" />}
           </div>
-          <p className="text-sm text-secondary leading-relaxed mb-2">
+          <p className="text-base text-secondary leading-relaxed mb-3">
             {truncate((data as { description: string }).description)}
           </p>
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3 text-xs text-muted">
+            <div className="flex items-center gap-3 text-sm text-muted">
               <span>@{(data as LeoAlert).user?.handle ?? '—'}</span>
               <span>{timeAgo(data.created_at)}</span>
             </div>
             <div className="flex items-center gap-2">
               {commentCount > 0 && (
-                <div className="flex items-center gap-1 text-xs text-muted">
-                  <MessageCircle size={13} />
+                <div className="flex items-center gap-1 text-sm text-muted">
+                  <MessageCircle size={15} />
                   <span>{commentCount}</span>
                 </div>
               )}
               {hasLocation && onShowOnMap && (
                 <button
                   onClick={(e) => { e.stopPropagation(); onShowOnMap() }}
-                  className="flex items-center gap-1 text-xs text-brand hover:text-brand-light transition-colors"
+                  className="flex items-center gap-1 text-sm text-brand hover:text-brand-light transition-colors"
                 >
-                  <MapPin size={13} />
+                  <MapPin size={15} />
                   <span>Map</span>
                 </button>
               )}

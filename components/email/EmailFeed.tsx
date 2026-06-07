@@ -70,18 +70,18 @@ function EmailRow({ email, onClick }: { email: MhazEmail; onClick: () => void })
       onClick={onClick}
       className="w-full text-left px-4 py-4 hover:bg-elevated/50 transition-colors active:bg-elevated border-b border-border last:border-0"
     >
-      <div className="flex items-start justify-between gap-2 mb-1">
-        <span className="text-sm font-semibold text-primary leading-snug line-clamp-2">
+      <div className="flex items-start justify-between gap-2 mb-1.5">
+        <span className="text-lg font-semibold text-primary leading-snug line-clamp-2">
           {subject}
         </span>
-        <span className="text-xs text-muted shrink-0 mt-0.5">
+        <span className="text-sm text-muted shrink-0 mt-0.5">
           {timeAgo(email.received_at)}
         </span>
       </div>
-      <p className="text-sm text-secondary mb-1.5">
+      <p className="text-base text-secondary mb-2">
         {email.sender_name || email.sender_email}
       </p>
-      <p className="text-sm text-muted leading-relaxed line-clamp-2">
+      <p className="text-base text-muted leading-relaxed line-clamp-2">
         {email.body}
       </p>
     </button>

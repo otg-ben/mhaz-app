@@ -1,6 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  serverExternalPackages: ['googleapis', 'google-auth-library'],
+  experimental: {
+    serverComponentsExternalPackages: ['googleapis', 'google-auth-library'],
+  },
   // Required for mapbox-gl worker
   webpack: (config) => {
     config.resolve.alias = {

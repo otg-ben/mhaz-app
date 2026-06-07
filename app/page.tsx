@@ -8,6 +8,7 @@ import { AlertDetailModal } from '@/components/alerts/AlertDetailModal'
 import { AddAlertModal } from '@/components/alerts/AddAlertModal'
 import { AddAlertFAB } from '@/components/alerts/AddAlertFAB'
 import { BottomNav } from '@/components/layout/BottomNav'
+import { EmailFeed } from '@/components/email/EmailFeed'
 import { TopBar } from '@/components/layout/TopBar'
 import { AuthModal } from '@/components/auth/AuthModal'
 import { useAuth } from '@/contexts/AuthContext'
@@ -28,7 +29,7 @@ export default function HomePage() {
   const { toast } = useToast()
 
   // All hooks must be declared before any conditional return
-  const [activeView, setActiveView] = useState<'map' | 'feed'>('map')
+  const [activeView, setActiveView] = useState<'map' | 'feed' | 'email'>('map')
   const [mapStyle, setMapStyle] = useState<'topo' | 'satellite'>('topo')
   const [activeTypes, setActiveTypes] = useState<Set<AlertType>>(new Set(ALL_TYPES))
   const [timeRange, setTimeRange] = useState<TimeRange>('14d')
@@ -158,6 +159,14 @@ export default function HomePage() {
               onAlertClick={(type, data) => setSelectedAlert({ type, data })}
               onShowOnMap={handleShowOnMap}
             />
+          </div>
+
+          {/* MHAZ Email Feed */}
+          <div className={cn(
+            'flex flex-col border-l border-border bg-surface',
+            activeView === 'email' ? 'flex-1' : 'hidden',
+          )}>
+            <EmailFeed />
           </div>
         </div>
       </div>

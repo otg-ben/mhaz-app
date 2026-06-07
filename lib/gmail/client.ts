@@ -1,44 +1,45 @@
 import { google } from 'googleapis'
 
 function getOAuthClient() {
-  return new google.auth.OAuth2(
+  const auth = new google.auth.OAuth2(
     process.env.GMAIL_CLIENT_ID,
     process.env.GMAIL_CLIENT_SECRET,
   )
-}
-
-export function getGmailClient() {
-  const auth = getOAuthClient()
   auth.setCredentials({ refresh_token: process.env.GMAIL_REFRESH_TOKEN })
-  return google.gmail({ version: 'v1', auth })
+  return auth
 }
 
-// ─── Fetch unread MHAZ group messages ────────────────────────────────────────
-
-export interface RawEmail {
-  id: string
-  threadId: string
+export interface ParsedEmail {
+  gmailMessageId: string
   subject: string
-  sender: string
-  receivedAt: Date
+  senderName: string
+  senderEmail: string
   body: string
+  receivedAt: Date
 }
 
-export async function fetchUnreadGroupEmails(): Promise<RawEmail[]> {
-  const gmail = getGmailClient()
-  const groupEmail = process.env.MHAZ_GROUP_EMAIL ?? ''
+export async function fetchMhazEmailsSince(since: Date | null): Promise<ParsedEmail[]> {
+  const auth  = getOAuthClient()
+  const gmail = google.gmail({ version: 'v1', auth })
 
-  // Search for unread messages from the group
+  // Build query: [MHAZ] in subject, after a given date
+  let q = 'subject:"[MHAZ]"'
+  if (since) {
+    // Gmail after: filter uses unix timestamp in seconds
+    const epoch = Math.floor(since.getTime() / 1000)
+    q += ` after:${epoch}`
+  }
+
   const listRes = await gmail.users.messages.list({
     userId: 'me',
-    q: `from:${groupEmail} is:unread`,
-    maxResults: 50,
+    q,
+    maxResults: 100,
   })
 
   const messages = listRes.data.messages ?? []
   if (messages.length === 0) return []
 
-  const emails: RawEmail[] = []
+  const emails: ParsedEmail[] = []
 
   for (const msg of messages) {
     if (!msg.id) continue
@@ -49,47 +50,42 @@ export async function fetchUnreadGroupEmails(): Promise<RawEmail[]> {
       format: 'full',
     })
 
-    const headers = full.data.payload?.headers ?? []
-    const subject = headers.find(h => h.name === 'Subject')?.value ?? ''
-    const sender  = headers.find(h => h.name === 'From')?.value ?? ''
-    const dateStr = headers.find(h => h.name === 'Date')?.value ?? ''
+    const headers    = full.data.payload?.headers ?? []
+    const subject    = headers.find(h => h.name === 'Subject')?.value ?? ''
+    const fromHeader = headers.find(h => h.name === 'From')?.value ?? ''
+    const dateStr    = headers.find(h => h.name === 'Date')?.value ?? ''
 
+    const { name: senderName, email: senderEmail } = parseFrom(fromHeader)
     const body = extractBody(full.data.payload)
 
     emails.push({
-      id: msg.id,
-      threadId: msg.threadId ?? '',
+      gmailMessageId: msg.id,
       subject,
-      sender,
-      receivedAt: dateStr ? new Date(dateStr) : new Date(),
+      senderName,
+      senderEmail,
       body,
+      receivedAt: dateStr ? new Date(dateStr) : new Date(),
     })
   }
 
   return emails
 }
 
-export async function markAsRead(messageId: string) {
-  const gmail = getGmailClient()
-  await gmail.users.messages.modify({
-    userId: 'me',
-    id: messageId,
-    requestBody: { removeLabelIds: ['UNREAD'] },
-  })
+function parseFrom(from: string): { name: string; email: string } {
+  // "First Last <email@example.com>" or just "email@example.com"
+  const match = from.match(/^(.+?)\s*<(.+?)>$/)
+  if (match) return { name: match[1].trim().replace(/^"|"$/g, ''), email: match[2].trim() }
+  return { name: '', email: from.trim() }
 }
-
-// ─── Body extraction ─────────────────────────────────────────────────────────
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function extractBody(payload: any): string {
   if (!payload) return ''
 
-  // Prefer plain text
   if (payload.mimeType === 'text/plain' && payload.body?.data) {
-    return Buffer.from(payload.body.data, 'base64').toString('utf-8')
+    return Buffer.from(payload.body.data, 'base64').toString('utf-8').trim()
   }
 
-  // Walk parts
   if (payload.parts) {
     for (const part of payload.parts) {
       const text = extractBody(part)
@@ -97,7 +93,6 @@ function extractBody(payload: any): string {
     }
   }
 
-  // Fallback to html
   if (payload.mimeType === 'text/html' && payload.body?.data) {
     const html = Buffer.from(payload.body.data, 'base64').toString('utf-8')
     return html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()

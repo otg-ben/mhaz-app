@@ -214,3 +214,16 @@ export interface SelectedAlert {
 }
 
 export type ActiveTab = AlertType
+
+// ─── MHAZ Email Feed ──────────────────────────────────────────────────────────
+
+export interface MhazEmail {
+  id: string
+  gmail_message_id: string
+  subject: string
+  sender_name: string
+  sender_email: string
+  body: string
+  received_at: string
+  created_at: string
+}

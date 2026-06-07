@@ -1,13 +1,13 @@
 'use client'
 
-import { Map, List, Search, MessageCircle, User } from 'lucide-react'
+import { Map, List, Mail, MessageCircle, User } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { ActiveTab } from '@/types'
 
 interface BottomNavProps {
-  activeView: 'map' | 'feed'
+  activeView: 'map' | 'feed' | 'email'
   activeTab: ActiveTab
-  onViewChange: (view: 'map' | 'feed') => void
+  onViewChange: (view: 'map' | 'feed' | 'email') => void
   onTabChange: (tab: ActiveTab) => void
   onProfileClick: () => void
   onDMClick: () => void
@@ -37,10 +37,10 @@ export function BottomNav({
           onClick={() => onViewChange('feed')}
         />
         <NavButton
-          icon={<Search size={22} />}
-          label="Search"
-          active={false}
-          onClick={() => {}}
+          icon={<Mail size={22} />}
+          label="MHAZ List"
+          active={activeView === 'email'}
+          onClick={() => onViewChange('email')}
         />
         <NavButton
           icon={

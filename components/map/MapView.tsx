@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import dynamic from 'next/dynamic'
 import { Layers, MapPin } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -39,6 +39,7 @@ interface MapViewProps {
   showResolved: boolean
   onToggleResolved: () => void
   flyTo: { lat: number; lng: number; v: number } | null
+  initialPinPos?: { lat: number; lng: number } | null
 }
 
 export function MapView({
@@ -60,13 +61,26 @@ export function MapView({
   showResolved,
   onToggleResolved,
   flyTo,
+  initialPinPos,
 }: MapViewProps) {
   const [pendingPos, setPendingPos] = useState<{ lat: number; lng: number } | null>(null)
+  const appliedInitial = useRef(false)
 
   // Clear pending pin when placement mode exits
   useEffect(() => {
-    if (!placingPin) setPendingPos(null)
+    if (!placingPin) {
+      setPendingPos(null)
+      appliedInitial.current = false
+    }
   }, [placingPin])
+
+  // Pre-place pin at user's location when geolocation resolves
+  useEffect(() => {
+    if (placingPin && initialPinPos && !appliedInitial.current) {
+      appliedInitial.current = true
+      setPendingPos(initialPinPos)
+    }
+  }, [placingPin, initialPinPos])
 
   const handleConfirm = () => {
     if (pendingPos) onPinPlaced(pendingPos.lat, pendingPos.lng)

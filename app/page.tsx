@@ -41,6 +41,7 @@ export default function HomePage() {
   const [addAlertType, setAddAlertType] = useState<AlertType | null>(null)
   const [pendingPin, setPendingPin] = useState<{ lat: number; lng: number } | null>(null)
   const [placingPinFor, setPlacingPinFor] = useState<AlertType | null>(null)
+  const [initialPinPos, setInitialPinPos] = useState<{ lat: number; lng: number } | null>(null)
 
   const { data: leoData,   mutate: leoMutate }   = useSWR<{ data: LeoAlert[] }>(
     user ? `/api/alerts/leo?range=${timeRange}` : null, fetcher)
@@ -66,6 +67,19 @@ export default function HomePage() {
   const handleFABSelect = (type: AlertType) => {
     setPlacingPinFor(type)
     setActiveView('map')
+
+    // Jump to user's current location and pre-place the pin there
+    if (!navigator.geolocation) return
+    navigator.geolocation.getCurrentPosition(
+      ({ coords }) => {
+        const { latitude: lat, longitude: lng } = coords
+        if (!isInValidRegion(lat, lng)) return
+        setFlyTo(prev => ({ lat, lng, v: (prev?.v ?? 0) + 1 }))
+        setInitialPinPos({ lat, lng })
+      },
+      () => {}, // denied or unavailable — fall back to manual tap
+      { timeout: 8000, maximumAge: 30000 }
+    )
   }
 
   const handlePinPlaced = useCallback((lat: number, lng: number) => {
@@ -81,6 +95,7 @@ export default function HomePage() {
   const handleAddSuccess = () => {
     setPendingPin(null)
     setAddAlertType(null)
+    setInitialPinPos(null)
     refreshAll()
   }
 
@@ -131,7 +146,8 @@ export default function HomePage() {
               onAlertClick={(type, data) => setSelectedAlert({ type, data })}
               placingPin={!!placingPinFor}
               onPinPlaced={handlePinPlaced}
-              onCancelPin={() => setPlacingPinFor(null)}
+              onCancelPin={() => { setPlacingPinFor(null); setInitialPinPos(null) }}
+              initialPinPos={initialPinPos}
               highlightedId={highlightedId}
               mapStyle={mapStyle}
               onMapStyleToggle={() => setMapStyle(s => s === 'topo' ? 'satellite' : 'topo')}

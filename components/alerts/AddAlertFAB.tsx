@@ -32,7 +32,7 @@ export function AddAlertFAB({ onSelect, disabled }: AddAlertFABProps) {
   }
 
   return (
-    <div className="fixed bottom-20 right-4 z-40 flex flex-col items-end gap-2 md:bottom-6">
+    <div className="fixed bottom-28 right-4 z-40 flex flex-col items-end gap-2 md:bottom-6">
       {/* Options */}
       {open && (
         <div className="flex flex-col items-end gap-2 animate-slide-up">

@@ -123,7 +123,7 @@ export function MapView({
       <button
         onClick={onMapStyleToggle}
         className={cn(
-          'absolute bottom-20 left-3 z-10 md:bottom-6',
+          'absolute bottom-28 left-3 z-10 md:bottom-6',
           'p-2.5 rounded-xl bg-surface/90 backdrop-blur-sm border border-border',
           'text-secondary hover:text-primary transition-colors shadow-pin',
         )}
@@ -158,7 +158,7 @@ export function MapView({
               </div>
 
               {/* Confirm / Cancel buttons */}
-              <div className="absolute bottom-24 left-1/2 -translate-x-1/2 flex items-center gap-3 pointer-events-auto md:bottom-8">
+              <div className="absolute bottom-32 left-1/2 -translate-x-1/2 flex items-center gap-3 pointer-events-auto md:bottom-8">
                 <button
                   onClick={handleCancel}
                   className="px-4 py-2.5 rounded-2xl text-sm font-medium bg-elevated border border-border text-secondary hover:text-primary transition-colors shadow-pin"

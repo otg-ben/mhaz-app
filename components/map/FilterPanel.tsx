@@ -38,7 +38,7 @@ export function FilterPanel({ activeTypes, onToggleType, timeRange, onTimeRangeC
   const isFiltered = activeTypes.size < 4
 
   return (
-    <div ref={ref} className="absolute top-14 left-3 z-20">
+    <div ref={ref} className="absolute top-4 left-3 z-20">
       {/* Trigger */}
       <button
         onClick={() => setOpen(v => !v)}

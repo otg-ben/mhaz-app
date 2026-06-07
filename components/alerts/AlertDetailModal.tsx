@@ -133,7 +133,7 @@ export function AlertDetailModal({ open, onClose, type, data, onUpdate, onGoToMa
               {(data as LeoAlert).source === 'mhaz' && <Badge type="mhaz" />}
               {isResolved && <Badge type="resolved" />}
             </div>
-            <h2 className="text-base font-semibold text-primary">{getTypeLabel()}</h2>
+            <h2 className="text-xl font-semibold text-primary">{getTypeLabel()}</h2>
           </div>
           {/* Follow button */}
           {user && (
@@ -151,7 +151,7 @@ export function AlertDetailModal({ open, onClose, type, data, onUpdate, onGoToMa
         </div>
 
         {/* Description */}
-        <p className="text-sm text-secondary leading-relaxed">
+        <p className="text-base text-secondary leading-relaxed">
           {(data as { description: string }).description || <span className="text-muted italic">No description provided</span>}
         </p>
 
@@ -170,11 +170,11 @@ export function AlertDetailModal({ open, onClose, type, data, onUpdate, onGoToMa
           return (
             <button
               onClick={() => { onGoToMap(coords.lat, coords.lng); onClose() }}
-              className="flex items-center gap-2 px-3 py-2 rounded-xl bg-surface border border-border text-sm text-secondary hover:text-primary hover:border-brand transition-colors w-full"
+              className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-surface border border-border text-base text-secondary hover:text-primary hover:border-brand transition-colors w-full"
             >
-              <Navigation size={14} className="text-brand flex-shrink-0" />
+              <Navigation size={16} className="text-brand flex-shrink-0" />
               <span className="font-medium">Go to map</span>
-              <span className="text-xs text-muted ml-auto font-mono">
+              <span className="text-sm text-muted ml-auto font-mono">
                 {Math.abs(coords.lat).toFixed(4)}°, {Math.abs(coords.lng).toFixed(4)}°
               </span>
             </button>
@@ -204,11 +204,11 @@ export function AlertDetailModal({ open, onClose, type, data, onUpdate, onGoToMa
 
         {/* Meta grid */}
         <div className="grid grid-cols-2 gap-3">
-          <MetaItem icon={<User size={13} />} label="Posted by" value={`@${(data as LeoAlert).user?.handle ?? '—'}`} />
-          <MetaItem icon={<Clock size={13} />} label="Posted" value={formatDate(data.created_at)} />
+          <MetaItem icon={<User size={15} />} label="Posted by" value={`@${(data as LeoAlert).user?.handle ?? '—'}`} />
+          <MetaItem icon={<Clock size={15} />} label="Posted" value={formatDate(data.created_at)} />
           {hasCoords && type !== 'lost_found' && (
             <MetaItem
-              icon={<MapPin size={13} />}
+              icon={<MapPin size={15} />}
               label="Location"
               value={formatCoords(
                 (data as LeoAlert).lat,
@@ -219,7 +219,7 @@ export function AlertDetailModal({ open, onClose, type, data, onUpdate, onGoToMa
           )}
           {type === 'citation' && (
             <MetaItem
-              icon={<Clock size={13} />}
+              icon={<Clock size={15} />}
               label="Incident date"
               value={formatDate((data as Citation).incident_date)}
               className="col-span-2"
@@ -227,7 +227,7 @@ export function AlertDetailModal({ open, onClose, type, data, onUpdate, onGoToMa
           )}
           {type === 'trail' && isResolved && (data as TrailAlert).resolved_at && (
             <MetaItem
-              icon={<CheckCircle2 size={13} />}
+              icon={<CheckCircle2 size={15} />}
               label="Resolved by"
               value={`@${(data as TrailAlert).resolver?.handle ?? '—'} · ${formatDate((data as TrailAlert).resolved_at!)}`}
               className="col-span-2"
@@ -278,7 +278,7 @@ export function AlertDetailModal({ open, onClose, type, data, onUpdate, onGoToMa
 
         {/* Comments */}
         <div>
-          <h3 className="text-xs font-semibold text-secondary uppercase tracking-wide mb-3">
+          <h3 className="text-sm font-semibold text-secondary uppercase tracking-wide mb-3">
             Comments
           </h3>
           <CommentThread alertType={type} alertId={data.id} />
@@ -302,11 +302,11 @@ function MetaItem({
 }) {
   return (
     <div className={cn('space-y-0.5', className)}>
-      <div className="flex items-center gap-1 text-[10px] text-muted uppercase tracking-wide font-medium">
+      <div className="flex items-center gap-1 text-xs text-muted uppercase tracking-wide font-medium">
         {icon}
         <span>{label}</span>
       </div>
-      <p className="text-xs text-secondary">{value}</p>
+      <p className="text-base text-secondary">{value}</p>
     </div>
   )
 }

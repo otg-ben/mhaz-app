@@ -97,23 +97,23 @@ function EmailDetailModal({ email, onClose }: { email: MhazEmail; onClose: () =>
     <Modal open onClose={onClose} size="lg">
       <div className="px-5 py-5">
         {/* Subject */}
-        <h2 className="text-lg font-bold text-primary leading-snug mb-3 pr-8">
+        <h2 className="text-xl font-bold text-primary leading-snug mb-3 pr-8">
           {subject}
         </h2>
 
         {/* Meta */}
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mb-4 pb-4 border-b border-border">
-          <span className="text-sm font-medium text-secondary">
+          <span className="text-base font-medium text-secondary">
             {email.sender_name || email.sender_email}
           </span>
           {email.sender_name && (
-            <span className="text-xs text-muted">{email.sender_email}</span>
+            <span className="text-sm text-muted">{email.sender_email}</span>
           )}
-          <span className="text-xs text-muted ml-auto">{formatDate(email.received_at)}</span>
+          <span className="text-sm text-muted ml-auto">{formatDate(email.received_at)}</span>
         </div>
 
         {/* Body */}
-        <p className="text-sm text-primary leading-relaxed whitespace-pre-wrap">
+        <p className="text-base text-primary leading-relaxed whitespace-pre-wrap">
           {email.body}
         </p>
       </div>

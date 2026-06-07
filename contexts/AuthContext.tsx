@@ -40,23 +40,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [user, fetchProfile])
 
   useEffect(() => {
-    const init = async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession()
-        setSession(session)
-        setUser(session?.user ?? null)
-        if (session?.user) await fetchProfile(session.user.id)
-      } catch (err) {
-        console.error('[auth] getSession failed:', err)
-      } finally {
-        setLoading(false)
-      }
-    }
+    let mounted = true
 
-    init()
+    // Fallback: if auth doesn't resolve in 6s, clear the spinner anyway
+    const fallback = setTimeout(() => {
+      if (mounted) setLoading(false)
+    }, 6000)
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (_event, session) => {
+        if (!mounted) return
+        clearTimeout(fallback)
         setSession(session)
         setUser(session?.user ?? null)
         if (session?.user) {
@@ -64,10 +58,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         } else {
           setProfile(null)
         }
+        setLoading(false)
       }
     )
 
-    return () => subscription.unsubscribe()
+    // Also try getSession directly — whichever resolves first wins
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!mounted) return
+      clearTimeout(fallback)
+      setSession(session)
+      setUser(session?.user ?? null)
+      if (session?.user) fetchProfile(session.user.id)
+      setLoading(false)
+    }).catch(() => {
+      if (mounted) setLoading(false)
+    })
+
+    return () => {
+      mounted = false
+      clearTimeout(fallback)
+      subscription.unsubscribe()
+    }
   }, [supabase, fetchProfile])
 
   const signIn = async (email: string, password: string) => {

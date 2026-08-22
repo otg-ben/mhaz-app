@@ -8,7 +8,6 @@ import { AlertDetailModal } from '@/components/alerts/AlertDetailModal'
 import { AddAlertModal } from '@/components/alerts/AddAlertModal'
 import { AddAlertFAB } from '@/components/alerts/AddAlertFAB'
 import { BottomNav } from '@/components/layout/BottomNav'
-import { EmailFeed } from '@/components/email/EmailFeed'
 import { CommunityView } from '@/components/community/CommunityView'
 import { EventDetailModal } from '@/components/events/EventDetailModal'
 import { TopBar } from '@/components/layout/TopBar'
@@ -18,14 +17,14 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useToast } from '@/contexts/ToastContext'
 import { isInValidRegion } from '@/lib/mapbox/bounds'
 import type {
-  AlertType, LeoAlert, TrailAlert, Citation,
+  AlertType, FeedFilterType, LeoAlert, TrailAlert, Citation,
   TimeRange, SelectedAlert, ActiveView, EventPost,
 } from '@/types'
 import { cn } from '@/lib/utils'
 
 const fetcher = (url: string) => fetch(url).then(r => r.json())
 
-const ALL_TYPES = new Set<AlertType>(['leo', 'trail', 'citation'])
+const ALL_TYPES = new Set<FeedFilterType>(['leo', 'trail', 'citation', 'mhaz'])
 
 export default function HomePage() {
   const { user, profile, isApproved, loading: authLoading } = useAuth()
@@ -34,7 +33,7 @@ export default function HomePage() {
   // All hooks must be declared before any conditional return
   const [activeView, setActiveView] = useState<ActiveView>('map')
   const [mapStyle, setMapStyle] = useState<'topo' | 'satellite'>('topo')
-  const [activeTypes, setActiveTypes] = useState<Set<AlertType>>(new Set(ALL_TYPES))
+  const [activeTypes, setActiveTypes] = useState<Set<FeedFilterType>>(new Set(ALL_TYPES))
   const [timeRange, setTimeRange] = useState<TimeRange>('14d')
   const [showResolved, setShowResolved] = useState(false)
   const [highlightedId, setHighlightedId] = useState<string | undefined>()
@@ -59,7 +58,7 @@ export default function HomePage() {
     leoMutate(); trailMutate(); citMutate()
   }, [leoMutate, trailMutate, citMutate])
 
-  const handleToggleType = useCallback((type: AlertType) => {
+  const handleToggleType = useCallback((type: FeedFilterType) => {
     setActiveTypes(prev => {
       const next = new Set(prev)
       if (next.has(type)) { next.delete(type) } else { next.add(type) }
@@ -193,14 +192,6 @@ export default function HomePage() {
               onAlertClick={(type, data) => setSelectedAlert({ type, data })}
               onShowOnMap={handleShowOnMap}
             />
-          </div>
-
-          {/* MHAZ Email Feed */}
-          <div className={cn(
-            'flex-col border-l border-border bg-surface',
-            activeView === 'email' ? 'flex flex-1 md:w-[420px] md:flex-none' : 'hidden',
-          )}>
-            <EmailFeed />
           </div>
 
           {/* Community — lost & found + events */}

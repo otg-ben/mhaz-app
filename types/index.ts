@@ -63,7 +63,10 @@ export interface EventPost {
 
 export type EventScope = 'upcoming' | 'past'
 
-export type ActiveView = 'map' | 'feed' | 'email' | 'community' | 'dms'
+// MHAZ list emails share the alert feed's filter bar without being an alert
+export type FeedFilterType = AlertType | 'mhaz'
+
+export type ActiveView = 'map' | 'feed' | 'community' | 'dms'
 export type CommunityTab = 'lost_found' | 'events'
 export type LostFoundStatus = 'open' | 'resolved'
 

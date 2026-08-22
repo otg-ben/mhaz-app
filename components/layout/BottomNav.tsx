@@ -1,6 +1,6 @@
 'use client'
 
-import { Map, List, Mail, Users, MessageCircle } from 'lucide-react'
+import { Map, List, Users, MessageCircle } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { ActiveView } from '@/types'
 
@@ -16,7 +16,6 @@ export function BottomNav({ activeView, onViewChange, unreadDMs = 0 }: BottomNav
       <div className="flex items-center justify-around px-2 py-2 pb-safe">
         <NavButton icon={<Map size={22} />}  label="Map"   active={activeView === 'map'}       onClick={() => onViewChange('map')} />
         <NavButton icon={<List size={22} />} label="Feed"  active={activeView === 'feed'}      onClick={() => onViewChange('feed')} />
-        <NavButton icon={<Mail size={22} />} label="MHAZ"  active={activeView === 'email'}     onClick={() => onViewChange('email')} />
         <NavButton icon={<Users size={22} />} label="Community" active={activeView === 'community'} onClick={() => onViewChange('community')} />
         <NavButton
           icon={

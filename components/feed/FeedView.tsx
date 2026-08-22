@@ -5,8 +5,12 @@ import { useMemo } from 'react'
 import { FeedItem } from './FeedItem'
 import { TimeRangeDropdown } from '@/components/ui/TimeRangeDropdown'
 import { cn } from '@/lib/utils'
-import type { LeoAlert, TrailAlert, Citation, LostFoundPost, AlertType, TimeRange } from '@/types'
+import type { LeoAlert, TrailAlert, Citation, LostFoundPost, AlertType, TimeRange, MhazEmail, FeedFilterType } from '@/types'
 import { RefreshCw } from 'lucide-react'
+import { useState } from 'react'
+import { EmailDetailModal, useMhazSync } from '@/components/email/EmailFeed'
+import { Badge } from '@/components/ui/Badge'
+import { timeAgo } from '@/lib/utils'
 
 const fetcher = (url: string) => fetch(url).then(r => r.json())
 
@@ -15,11 +19,13 @@ type UnifiedItem =
   | { _type: 'trail';      data: TrailAlert }
   | { _type: 'citation';   data: Citation }
   | { _type: 'lost_found'; data: LostFoundPost }
+  | { _type: 'mhaz';       data: MhazEmail }
 
-const TYPE_FILTERS: { type: AlertType; label: string; on: string; off: string }[] = [
+const TYPE_FILTERS: { type: FeedFilterType; label: string; on: string; off: string }[] = [
   { type: 'trail',      label: 'Trail',        on: 'bg-trail-bg border-trail-border text-trail-light',          off: 'bg-elevated border-border text-muted' },
   { type: 'leo',        label: 'LEO',          on: 'bg-leo-bg border-leo-border text-leo-light',                off: 'bg-elevated border-border text-muted' },
   { type: 'citation',   label: 'Citations',    on: 'bg-citation-bg border-citation-border text-citation-light', off: 'bg-elevated border-border text-muted' },
+  { type: 'mhaz',       label: 'MHAZ',         on: 'bg-mhaz-bg border-mhaz-border text-mhaz',                   off: 'bg-elevated border-border text-muted' },
 ]
 
 function getMapCoords(type: AlertType, data: LeoAlert | TrailAlert | Citation | LostFoundPost) {
@@ -32,8 +38,8 @@ function getMapCoords(type: AlertType, data: LeoAlert | TrailAlert | Citation | 
 }
 
 interface FeedViewProps {
-  activeTypes: Set<AlertType>
-  onToggleType: (type: AlertType) => void
+  activeTypes: Set<FeedFilterType>
+  onToggleType: (type: FeedFilterType) => void
   timeRange: TimeRange
   onTimeRangeChange: (range: TimeRange) => void
   showResolved: boolean
@@ -59,20 +65,27 @@ export function FeedView({
   const { data: citData,   isLoading: l3, mutate: m3 } = useSWR<{ data: Citation[] }>(
     activeTypes.has('citation')   ? `/api/citations?range=${timeRange}` : null, fetcher)
   // Lost & found lives in the Community tab — it stays on the map but not in this feed
+  const { data: mhazData, isLoading: l4, mutate: m4 } = useSWR<{ data: MhazEmail[] }>(
+    activeTypes.has('mhaz') ? '/api/mhaz-emails' : null, fetcher)
 
-  const loading = l1 || l2 || l3
-  const refreshAll = () => { m1?.(); m2?.(); m3?.() }
+  const syncing = useMhazSync(m4)
+  const [selectedEmail, setSelectedEmail] = useState<MhazEmail | null>(null)
+
+  const loading = l1 || l2 || l3 || l4
+  const refreshAll = () => { m1?.(); m2?.(); m3?.(); m4?.() }
 
   const items = useMemo<UnifiedItem[]>(() => {
     const all: UnifiedItem[] = [
       ...(leoData?.data   ?? []).map(d => ({ _type: 'leo'        as const, data: d })),
       ...(trailData?.data  ?? []).map(d => ({ _type: 'trail'     as const, data: d })),
       ...(citData?.data    ?? []).map(d => ({ _type: 'citation'  as const, data: d })),
+      ...(mhazData?.data   ?? []).map(d => ({ _type: 'mhaz'      as const, data: d })),
     ]
-    return all.sort((a, b) =>
-      new Date(b.data.created_at).getTime() - new Date(a.data.created_at).getTime()
-    )
-  }, [leoData, trailData, citData])
+    // MHAZ emails sort by when they landed in the inbox, not when we ingested them
+    const at = (i: UnifiedItem) =>
+      new Date(i._type === 'mhaz' ? i.data.received_at : i.data.created_at).getTime()
+    return all.sort((a, b) => at(b) - at(a))
+  }, [leoData, trailData, citData, mhazData])
 
   return (
     <div className="flex flex-col h-full">
@@ -119,7 +132,7 @@ export function FeedView({
             onClick={refreshAll}
             className="ml-auto p-1 rounded-lg text-muted hover:text-secondary transition-colors flex-shrink-0"
           >
-            <RefreshCw size={12} className={cn(loading && 'animate-spin')} />
+            <RefreshCw size={12} className={cn((loading || syncing) && 'animate-spin')} />
           </button>
         </div>
       </div>
@@ -152,7 +165,13 @@ export function FeedView({
             <p className="text-muted text-xs">Try a wider time range or enable more types</p>
           </div>
         ) : (
-          items.map(item => (
+          items.map(item => item._type === 'mhaz' ? (
+            <MhazFeedRow
+              key={`mhaz-${item.data.id}`}
+              email={item.data}
+              onClick={() => setSelectedEmail(item.data)}
+            />
+          ) : (
             <FeedItem
               key={`${item._type}-${item.data.id}`}
               type={item._type}
@@ -165,6 +184,41 @@ export function FeedView({
             />
           ))
         )}
+      </div>
+
+      {selectedEmail && (
+        <EmailDetailModal email={selectedEmail} onClose={() => setSelectedEmail(null)} />
+      )}
+    </div>
+  )
+}
+
+/** MHAZ list emails in the feed — same row rhythm as FeedItem, no map or comments. */
+function MhazFeedRow({ email, onClick }: { email: MhazEmail; onClick: () => void }) {
+  const subject = email.subject.replace(/^\[MHAZ\]\s*/i, '').trim()
+
+  return (
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={onClick}
+      onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick() } }}
+      className="w-full cursor-pointer text-left px-4 py-3.5 hover:bg-elevated/50 transition-colors border-b border-border last:border-0 active:bg-elevated focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+    >
+      <div className="flex items-start gap-3">
+        <div className="flex-shrink-0 mt-0.5">
+          <Badge type="mhaz" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-start justify-between gap-2">
+            <p className="text-[15px] font-semibold text-primary leading-snug line-clamp-2">
+              {subject}
+            </p>
+            <span className="text-xs text-muted shrink-0 mt-0.5">{timeAgo(email.received_at)}</span>
+          </div>
+          <p className="text-sm text-secondary mt-1 line-clamp-2 leading-relaxed">{email.body}</p>
+          <p className="text-xs text-muted mt-1.5">{email.sender_name || email.sender_email}</p>
+        </div>
       </div>
     </div>
   )

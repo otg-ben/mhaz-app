@@ -8,6 +8,26 @@ import type { MhazEmail } from '@/types'
 
 const fetcher = (url: string) => fetch(url).then(r => r.json())
 
+/** One-shot Gmail sync on first mount; the API applies its own cooldown. */
+export function useMhazSync(mutate: () => void) {
+  const [syncing, setSyncing] = useState(false)
+  const didSync = useRef(false)
+
+  useEffect(() => {
+    if (didSync.current) return
+    didSync.current = true
+
+    setSyncing(true)
+    fetch('/api/mhaz-emails/sync', { method: 'POST' })
+      .then(r => r.json())
+      .then(res => { if (res.ingested > 0) mutate() })
+      .catch(() => {})
+      .finally(() => setSyncing(false))
+  }, [mutate])
+
+  return syncing
+}
+
 export function EmailFeed() {
   const { data, mutate } = useSWR<{ data: MhazEmail[] }>('/api/mhaz-emails', fetcher)
   const [syncing, setSyncing] = useState(false)
@@ -90,7 +110,7 @@ function EmailRow({ email, onClick }: { email: MhazEmail; onClick: () => void })
 
 // ─── Detail Modal ─────────────────────────────────────────────────────────────
 
-function EmailDetailModal({ email, onClose }: { email: MhazEmail; onClose: () => void }) {
+export function EmailDetailModal({ email, onClose }: { email: MhazEmail; onClose: () => void }) {
   const subject = email.subject.replace(/^\[MHAZ\]\s*/i, '').trim()
 
   return (

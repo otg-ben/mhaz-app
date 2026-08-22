@@ -6,7 +6,7 @@ import { Layers, MapPin } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { FilterPanel } from './FilterPanel'
 import { formatCoords } from '@/lib/mapbox/bounds'
-import type { LeoAlert, TrailAlert, Citation, LostFoundPost, AlertType, TimeRange } from '@/types'
+import type { LeoAlert, TrailAlert, Citation, LostFoundPost, AlertType, TimeRange, FeedFilterType } from '@/types'
 
 const MapClient = dynamic(() => import('./MapClient'), {
   ssr: false,
@@ -24,7 +24,7 @@ interface MapViewProps {
   leoAlerts: LeoAlert[]
   trailAlerts: TrailAlert[]
   citations: Citation[]
-  activeTypes: Set<AlertType>
+  activeTypes: Set<FeedFilterType>  // includes 'mhaz', which the map ignores
   onAlertClick: (type: AlertType, data: LeoAlert | TrailAlert | Citation | LostFoundPost) => void
   placingPin: boolean
   onPinPlaced: (lat: number, lng: number) => void
@@ -33,7 +33,7 @@ interface MapViewProps {
   mapStyle: 'topo' | 'satellite'
   onMapStyleToggle: () => void
   timeRange: TimeRange
-  onToggleType: (type: AlertType) => void
+  onToggleType: (type: FeedFilterType) => void
   onTimeRangeChange: (range: TimeRange) => void
   showResolved: boolean
   onToggleResolved: () => void

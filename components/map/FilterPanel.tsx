@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from 'react'
 import { SlidersHorizontal } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { TimeRangeDropdown } from '@/components/ui/TimeRangeDropdown'
-import type { AlertType, TimeRange } from '@/types'
+import type { AlertType, TimeRange, FeedFilterType } from '@/types'
 
 const TYPES: { type: AlertType; label: string; on: string; off: string }[] = [
   { type: 'trail',      label: 'Trail',        on: 'bg-trail-bg border-trail-border text-trail-light',          off: 'bg-elevated border-border text-muted' },
@@ -13,8 +13,8 @@ const TYPES: { type: AlertType; label: string; on: string; off: string }[] = [
 ]
 
 interface FilterPanelProps {
-  activeTypes: Set<AlertType>
-  onToggleType: (type: AlertType) => void
+  activeTypes: Set<FeedFilterType>
+  onToggleType: (type: FeedFilterType) => void
   timeRange: TimeRange
   onTimeRangeChange: (range: TimeRange) => void
   showResolved: boolean
@@ -34,7 +34,8 @@ export function FilterPanel({ activeTypes, onToggleType, timeRange, onTimeRangeC
     return () => document.removeEventListener('mousedown', handler)
   }, [open])
 
-  const isFiltered = activeTypes.size < 4
+  const mapTypes = TYPES.filter(f => activeTypes.has(f.type))
+  const isFiltered = mapTypes.length < TYPES.length
 
   return (
     <div ref={ref} className="absolute top-4 left-3 z-20">
@@ -53,7 +54,7 @@ export function FilterPanel({ activeTypes, onToggleType, timeRange, onTimeRangeC
         <span className="text-xs">Filter</span>
         {isFiltered && (
           <span className="w-4 h-4 rounded-full bg-brand text-base text-[10px] font-bold flex items-center justify-center leading-none">
-            {activeTypes.size}
+            {mapTypes.length}
           </span>
         )}
       </button>

@@ -31,6 +31,9 @@ export type CitationInfractionType =
   | 'other'
 
 export type LostFoundType = 'lost' | 'found'
+
+export type ActiveView = 'map' | 'feed' | 'email' | 'community' | 'dms'
+export type CommunityTab = 'lost_found' | 'events'
 export type LostFoundStatus = 'open' | 'resolved'
 
 export type MhazClassification = 'leo' | 'trail_issue' | 'citation' | 'unclassified'

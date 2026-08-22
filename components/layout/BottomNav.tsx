@@ -1,47 +1,23 @@
 'use client'
 
-import { Map, List, Mail, MessageCircle, User } from 'lucide-react'
+import { Map, List, Mail, Users, MessageCircle } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import type { ActiveTab } from '@/types'
+import type { ActiveView } from '@/types'
 
 interface BottomNavProps {
-  activeView: 'map' | 'feed' | 'email'
-  activeTab: ActiveTab
-  onViewChange: (view: 'map' | 'feed' | 'email') => void
-  onTabChange: (tab: ActiveTab) => void
-  onProfileClick: () => void
-  onDMClick: () => void
+  activeView: ActiveView
+  onViewChange: (view: ActiveView) => void
   unreadDMs?: number
 }
 
-export function BottomNav({
-  activeView,
-  onViewChange,
-  onProfileClick,
-  onDMClick,
-  unreadDMs = 0,
-}: BottomNavProps) {
+export function BottomNav({ activeView, onViewChange, unreadDMs = 0 }: BottomNavProps) {
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-surface border-t border-border md:hidden">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-surface border-t border-border">
       <div className="flex items-center justify-around px-2 py-2 pb-safe">
-        <NavButton
-          icon={<Map size={22} />}
-          label="Map"
-          active={activeView === 'map'}
-          onClick={() => onViewChange('map')}
-        />
-        <NavButton
-          icon={<List size={22} />}
-          label="Feed"
-          active={activeView === 'feed'}
-          onClick={() => onViewChange('feed')}
-        />
-        <NavButton
-          icon={<Mail size={22} />}
-          label="MHAZ List"
-          active={activeView === 'email'}
-          onClick={() => onViewChange('email')}
-        />
+        <NavButton icon={<Map size={22} />}  label="Map"   active={activeView === 'map'}       onClick={() => onViewChange('map')} />
+        <NavButton icon={<List size={22} />} label="Feed"  active={activeView === 'feed'}      onClick={() => onViewChange('feed')} />
+        <NavButton icon={<Mail size={22} />} label="MHAZ"  active={activeView === 'email'}     onClick={() => onViewChange('email')} />
+        <NavButton icon={<Users size={22} />} label="Community" active={activeView === 'community'} onClick={() => onViewChange('community')} />
         <NavButton
           icon={
             <div className="relative">
@@ -54,14 +30,8 @@ export function BottomNav({
             </div>
           }
           label="DMs"
-          active={false}
-          onClick={onDMClick}
-        />
-        <NavButton
-          icon={<User size={22} />}
-          label="Profile"
-          active={false}
-          onClick={onProfileClick}
+          active={activeView === 'dms'}
+          onClick={() => onViewChange('dms')}
         />
       </div>
     </nav>
@@ -69,10 +39,7 @@ export function BottomNav({
 }
 
 function NavButton({
-  icon,
-  label,
-  active,
-  onClick,
+  icon, label, active, onClick,
 }: {
   icon: React.ReactNode
   label: string

@@ -20,7 +20,6 @@ const TYPE_FILTERS: { type: AlertType; label: string; on: string; off: string }[
   { type: 'trail',      label: 'Trail',        on: 'bg-trail-bg border-trail-border text-trail-light',          off: 'bg-elevated border-border text-muted' },
   { type: 'leo',        label: 'LEO',          on: 'bg-leo-bg border-leo-border text-leo-light',                off: 'bg-elevated border-border text-muted' },
   { type: 'citation',   label: 'Citations',    on: 'bg-citation-bg border-citation-border text-citation-light', off: 'bg-elevated border-border text-muted' },
-  { type: 'lost_found', label: 'Lost & Found', on: 'bg-lostfound-bg border-lostfound-border text-lostfound-light', off: 'bg-elevated border-border text-muted' },
 ]
 
 function getMapCoords(type: AlertType, data: LeoAlert | TrailAlert | Citation | LostFoundPost) {
@@ -59,23 +58,21 @@ export function FeedView({
     activeTypes.has('trail')      ? `/api/alerts/trail?range=${timeRange}&resolved=${showResolved}` : null, fetcher)
   const { data: citData,   isLoading: l3, mutate: m3 } = useSWR<{ data: Citation[] }>(
     activeTypes.has('citation')   ? `/api/citations?range=${timeRange}` : null, fetcher)
-  const { data: lostData,  isLoading: l4, mutate: m4 } = useSWR<{ data: LostFoundPost[] }>(
-    activeTypes.has('lost_found') ? `/api/lost-found?range=${timeRange}` : null, fetcher)
+  // Lost & found lives in the Community tab — it stays on the map but not in this feed
 
-  const loading = l1 || l2 || l3 || l4
-  const refreshAll = () => { m1?.(); m2?.(); m3?.(); m4?.() }
+  const loading = l1 || l2 || l3
+  const refreshAll = () => { m1?.(); m2?.(); m3?.() }
 
   const items = useMemo<UnifiedItem[]>(() => {
     const all: UnifiedItem[] = [
       ...(leoData?.data   ?? []).map(d => ({ _type: 'leo'        as const, data: d })),
       ...(trailData?.data  ?? []).map(d => ({ _type: 'trail'     as const, data: d })),
       ...(citData?.data    ?? []).map(d => ({ _type: 'citation'  as const, data: d })),
-      ...(lostData?.data   ?? []).map(d => ({ _type: 'lost_found'as const, data: d })),
     ]
     return all.sort((a, b) =>
       new Date(b.data.created_at).getTime() - new Date(a.data.created_at).getTime()
     )
-  }, [leoData, trailData, citData, lostData])
+  }, [leoData, trailData, citData])
 
   return (
     <div className="flex flex-col h-full">

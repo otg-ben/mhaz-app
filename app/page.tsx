@@ -9,6 +9,7 @@ import { AddAlertModal } from '@/components/alerts/AddAlertModal'
 import { AddAlertFAB } from '@/components/alerts/AddAlertFAB'
 import { BottomNav } from '@/components/layout/BottomNav'
 import { EmailFeed } from '@/components/email/EmailFeed'
+import { CommunityView } from '@/components/community/CommunityView'
 import { TopBar } from '@/components/layout/TopBar'
 import { AuthModal } from '@/components/auth/AuthModal'
 import { PendingApproval } from '@/components/auth/PendingApproval'
@@ -17,7 +18,7 @@ import { useToast } from '@/contexts/ToastContext'
 import { isInValidRegion } from '@/lib/mapbox/bounds'
 import type {
   AlertType, LeoAlert, TrailAlert, Citation, LostFoundPost,
-  TimeRange, SelectedAlert,
+  TimeRange, SelectedAlert, ActiveView,
 } from '@/types'
 import { cn } from '@/lib/utils'
 
@@ -30,7 +31,7 @@ export default function HomePage() {
   const { toast } = useToast()
 
   // All hooks must be declared before any conditional return
-  const [activeView, setActiveView] = useState<'map' | 'feed' | 'email'>('map')
+  const [activeView, setActiveView] = useState<ActiveView>('map')
   const [mapStyle, setMapStyle] = useState<'topo' | 'satellite'>('topo')
   const [activeTypes, setActiveTypes] = useState<Set<AlertType>>(new Set(ALL_TYPES))
   const [timeRange, setTimeRange] = useState<TimeRange>('14d')
@@ -43,6 +44,7 @@ export default function HomePage() {
   const [pendingPin, setPendingPin] = useState<{ lat: number; lng: number } | null>(null)
   const [placingPinFor, setPlacingPinFor] = useState<AlertType | null>(null)
   const [initialPinPos, setInitialPinPos] = useState<{ lat: number; lng: number } | null>(null)
+  const [communityKey, setCommunityKey] = useState(0)
 
   const { data: leoData,   mutate: leoMutate }   = useSWR<{ data: LeoAlert[] }>(
     user ? `/api/alerts/leo?range=${timeRange}` : null, fetcher)
@@ -63,6 +65,12 @@ export default function HomePage() {
       if (next.has(type)) { next.delete(type) } else { next.add(type) }
       return next
     })
+  }, [])
+
+  // Lost & found is posted straight from the Community tab — no pin required
+  const handleCreateLostFound = useCallback(() => {
+    setPendingPin(null)
+    setAddAlertType('lost_found')
   }, [])
 
   const handleFABSelect = (type: AlertType) => {
@@ -97,6 +105,7 @@ export default function HomePage() {
     setPendingPin(null)
     setAddAlertType(null)
     setInitialPinPos(null)
+    setCommunityKey(k => k + 1)
     refreshAll()
   }
 
@@ -136,12 +145,14 @@ export default function HomePage() {
     <div className="h-screen-safe flex flex-col overflow-hidden">
       <TopBar onAuthClick={() => setAuthOpen(true)} />
 
-      <div className="flex-1 overflow-hidden pt-[52px] pb-16 md:pb-0">
+      <div className="flex-1 overflow-hidden pt-[52px] pb-16">
         <div className="h-full flex">
           {/* Map */}
           <div className={cn(
             'transition-all duration-300',
-            activeView === 'map' ? 'flex-1' : 'hidden md:flex md:flex-[3]',
+            activeView === 'map' ? 'flex-1'
+              : activeView === 'feed' ? 'hidden md:flex md:flex-[3]'
+              : 'hidden md:flex md:flex-1',
           )}>
             <MapView
               leoAlerts={leoData?.data ?? []}
@@ -168,8 +179,10 @@ export default function HomePage() {
 
           {/* Feed */}
           <div className={cn(
-            'flex flex-col border-l border-border bg-surface',
-            activeView === 'feed' ? 'flex-1' : 'hidden md:flex md:w-[360px] md:flex-none',
+            'flex-col border-l border-border bg-surface',
+            activeView === 'feed' ? 'flex flex-1'
+              : activeView === 'map' ? 'hidden md:flex md:w-[360px] md:flex-none'
+              : 'hidden',
           )}>
             <FeedView
               activeTypes={activeTypes}
@@ -185,24 +198,43 @@ export default function HomePage() {
 
           {/* MHAZ Email Feed */}
           <div className={cn(
-            'flex flex-col border-l border-border bg-surface',
-            activeView === 'email' ? 'flex-1' : 'hidden',
+            'flex-col border-l border-border bg-surface',
+            activeView === 'email' ? 'flex flex-1 md:w-[420px] md:flex-none' : 'hidden',
           )}>
             <EmailFeed />
+          </div>
+
+          {/* Community — lost & found + events */}
+          <div className={cn(
+            'flex-col border-l border-border',
+            activeView === 'community' ? 'flex flex-1 md:w-[420px] md:flex-none' : 'hidden',
+          )}>
+            <CommunityView
+              onPostClick={post => setSelectedAlert({ type: 'lost_found', data: post })}
+              onShowOnMap={handleShowOnMap}
+              onCreateLostFound={handleCreateLostFound}
+              refreshKey={communityKey}
+            />
+          </div>
+
+          {/* Direct messages */}
+          <div className={cn(
+            'flex-col border-l border-border bg-surface',
+            activeView === 'dms' ? 'flex flex-1 md:w-[420px] md:flex-none' : 'hidden',
+          )}>
+            <div className="flex flex-col items-center justify-center h-full px-8 text-center">
+              <p className="text-secondary text-sm mb-1">Direct messages coming soon</p>
+              <p className="text-muted text-xs">Message riders about lost &amp; found posts.</p>
+            </div>
           </div>
         </div>
       </div>
 
-      {!placingPinFor && <AddAlertFAB onSelect={handleFABSelect} />}
+      {!placingPinFor && (activeView === 'map' || activeView === 'feed') && (
+        <AddAlertFAB onSelect={handleFABSelect} />
+      )}
 
-      <BottomNav
-        activeView={activeView}
-        activeTab="leo"
-        onViewChange={setActiveView}
-        onTabChange={() => {}}
-        onProfileClick={() => {}}
-        onDMClick={() => {}}
-      />
+      <BottomNav activeView={activeView} onViewChange={setActiveView} />
 
       <AuthModal open={authOpen} onClose={() => setAuthOpen(false)} />
 
@@ -218,7 +250,7 @@ export default function HomePage() {
       )}
 
       <AddAlertModal
-        open={!!addAlertType && !!pendingPin}
+        open={!!addAlertType && (!!pendingPin || addAlertType === 'lost_found')}
         onClose={() => { setAddAlertType(null); setPendingPin(null) }}
         alertType={addAlertType}
         lat={pendingPin?.lat ?? null}

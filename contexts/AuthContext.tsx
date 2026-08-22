@@ -44,6 +44,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     let mounted = true
 
+    // Email confirmation and magic links come back as an implicit-flow hash
+    // (#access_token=...). @supabase/ssr runs the PKCE flow, so it ignores
+    // those — without this the link lands on a signed-out page.
+    const consumeUrlHash = async () => {
+      if (typeof window === 'undefined') return
+      const hash = window.location.hash
+      if (!hash || !hash.includes('access_token')) return
+
+      const params = new URLSearchParams(hash.slice(1))
+      const access_token = params.get('access_token')
+      const refresh_token = params.get('refresh_token')
+      if (!access_token || !refresh_token) return
+
+      try {
+        await supabase.auth.setSession({ access_token, refresh_token })
+      } catch {
+        // fall through — the normal getSession path still runs
+      }
+      window.history.replaceState(null, '', window.location.pathname + window.location.search)
+    }
+
     // Fallback: if auth doesn't resolve in 6s, clear the spinner anyway
     const fallback = setTimeout(() => {
       if (mounted) setLoading(false)
@@ -65,7 +86,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     )
 
     // Also try getSession directly — whichever resolves first wins
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    consumeUrlHash().then(() => supabase.auth.getSession()).then(({ data: { session } }) => {
       if (!mounted) return
       clearTimeout(fallback)
       setSession(session)

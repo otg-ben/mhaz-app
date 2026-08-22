@@ -19,7 +19,6 @@ interface MapClientProps {
   leoAlerts: LeoAlert[]
   trailAlerts: TrailAlert[]
   citations: Citation[]
-  lostFound: LostFoundPost[]
   onAlertClick: (type: AlertType, data: LeoAlert | TrailAlert | Citation | LostFoundPost) => void
   placingPin: boolean
   pendingPos: { lat: number; lng: number } | null
@@ -45,7 +44,6 @@ export default function MapClient({
   leoAlerts,
   trailAlerts,
   citations,
-  lostFound,
   onAlertClick,
   placingPin,
   pendingPos,
@@ -159,17 +157,6 @@ export default function MapClient({
       ))}
 
       {/* Lost & Found Pins */}
-      {lostFound.filter(p => p.lat && p.long).map(post => (
-        <AlertMarker
-          key={post.id}
-          id={post.id}
-          lat={post.lat!}
-          lng={post.long!}
-          type="lost_found"
-          highlighted={highlightedId === post.id}
-          onClick={() => setPopupInfo({ type: 'lost_found', data: post, lat: post.lat!, lng: post.long! })}
-        />
-      ))}
 
       {/* Popup */}
       {popupInfo && (

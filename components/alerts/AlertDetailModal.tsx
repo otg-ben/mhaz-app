@@ -165,17 +165,12 @@ export function AlertDetailModal({ open, onClose, type, data, onUpdate, onGoToMa
         </p>
 
         {/* Go to Map */}
-        {onGoToMap && (() => {
+        {/* Lost & found lives only in the Community tab — it has no map pins */}
+        {onGoToMap && type !== 'lost_found' && (() => {
           const lat = (data as LeoAlert).lat
           const lng = (data as LeoAlert).long
-          const lf = data as LostFoundPost
-          const hasCoords = type !== 'lost_found'
-            ? (lat != null && lng != null)
-            : (lf.lat != null && lf.long != null)
-          const coords = type === 'lost_found'
-            ? { lat: lf.lat!, lng: lf.long! }
-            : { lat, lng }
-          if (!hasCoords) return null
+          const coords = { lat, lng }
+          if (lat == null || lng == null) return null
           return (
             <button
               onClick={() => { onGoToMap(coords.lat, coords.lng); onClose() }}

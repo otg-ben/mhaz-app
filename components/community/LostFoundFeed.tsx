@@ -13,12 +13,11 @@ type Filter = 'all' | LostFoundType
 
 interface LostFoundFeedProps {
   onPostClick: (post: LostFoundPost) => void
-  onShowOnMap: (id: string, lat?: number, lng?: number) => void
   onCreate: () => void
   refreshKey?: number
 }
 
-export function LostFoundFeed({ onPostClick, onShowOnMap, onCreate, refreshKey }: LostFoundFeedProps) {
+export function LostFoundFeed({ onPostClick, onCreate, refreshKey }: LostFoundFeedProps) {
   const [filter, setFilter] = useState<Filter>('all')
   const [showResolved, setShowResolved] = useState(false)
 
@@ -94,11 +93,6 @@ export function LostFoundFeed({ onPostClick, onShowOnMap, onCreate, refreshKey }
                 type="lost_found"
                 data={p}
                 onClick={() => onPostClick(p)}
-                onShowOnMap={
-                  p.lat != null && p.long != null
-                    ? () => onShowOnMap(p.id, p.lat!, p.long!)
-                    : undefined
-                }
               />
             ))}
           </div>

@@ -7,13 +7,12 @@ import type { CommunityTab, LostFoundPost } from '@/types'
 
 interface CommunityViewProps {
   onPostClick: (post: LostFoundPost) => void
-  onShowOnMap: (id: string, lat?: number, lng?: number) => void
   onCreateLostFound: () => void
   refreshKey?: number
 }
 
 export function CommunityView({
-  onPostClick, onShowOnMap, onCreateLostFound, refreshKey,
+  onPostClick, onCreateLostFound, refreshKey,
 }: CommunityViewProps) {
   const [tab, setTab] = useState<CommunityTab>('lost_found')
 
@@ -44,7 +43,6 @@ export function CommunityView({
         {tab === 'lost_found' ? (
           <LostFoundFeed
             onPostClick={onPostClick}
-            onShowOnMap={onShowOnMap}
             onCreate={onCreateLostFound}
             refreshKey={refreshKey}
           />

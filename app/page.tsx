@@ -17,14 +17,14 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useToast } from '@/contexts/ToastContext'
 import { isInValidRegion } from '@/lib/mapbox/bounds'
 import type {
-  AlertType, LeoAlert, TrailAlert, Citation, LostFoundPost,
+  AlertType, LeoAlert, TrailAlert, Citation,
   TimeRange, SelectedAlert, ActiveView,
 } from '@/types'
 import { cn } from '@/lib/utils'
 
 const fetcher = (url: string) => fetch(url).then(r => r.json())
 
-const ALL_TYPES = new Set<AlertType>(['leo', 'trail', 'citation', 'lost_found'])
+const ALL_TYPES = new Set<AlertType>(['leo', 'trail', 'citation'])
 
 export default function HomePage() {
   const { user, profile, isApproved, loading: authLoading } = useAuth()
@@ -52,12 +52,10 @@ export default function HomePage() {
     user ? `/api/alerts/trail?range=${timeRange}&resolved=${showResolved}` : null, fetcher)
   const { data: citData,   mutate: citMutate }   = useSWR<{ data: Citation[] }>(
     user ? `/api/citations?range=${timeRange}` : null, fetcher)
-  const { data: lostData,  mutate: lostMutate }  = useSWR<{ data: LostFoundPost[] }>(
-    user ? `/api/lost-found?range=${timeRange}` : null, fetcher)
 
   const refreshAll = useCallback(() => {
-    leoMutate(); trailMutate(); citMutate(); lostMutate()
-  }, [leoMutate, trailMutate, citMutate, lostMutate])
+    leoMutate(); trailMutate(); citMutate()
+  }, [leoMutate, trailMutate, citMutate])
 
   const handleToggleType = useCallback((type: AlertType) => {
     setActiveTypes(prev => {
@@ -158,7 +156,6 @@ export default function HomePage() {
               leoAlerts={leoData?.data ?? []}
               trailAlerts={trailData?.data ?? []}
               citations={citData?.data ?? []}
-              lostFound={lostData?.data ?? []}
               activeTypes={activeTypes}
               onAlertClick={(type, data) => setSelectedAlert({ type, data })}
               placingPin={!!placingPinFor}
@@ -211,7 +208,6 @@ export default function HomePage() {
           )}>
             <CommunityView
               onPostClick={post => setSelectedAlert({ type: 'lost_found', data: post })}
-              onShowOnMap={handleShowOnMap}
               onCreateLostFound={handleCreateLostFound}
               refreshKey={communityKey}
             />

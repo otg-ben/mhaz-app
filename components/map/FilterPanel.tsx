@@ -10,7 +10,6 @@ const TYPES: { type: AlertType; label: string; on: string; off: string }[] = [
   { type: 'trail',      label: 'Trail',        on: 'bg-trail-bg border-trail-border text-trail-light',          off: 'bg-elevated border-border text-muted' },
   { type: 'leo',        label: 'LEO',          on: 'bg-leo-bg border-leo-border text-leo-light',                off: 'bg-elevated border-border text-muted' },
   { type: 'citation',   label: 'Citations',    on: 'bg-citation-bg border-citation-border text-citation-light', off: 'bg-elevated border-border text-muted' },
-  { type: 'lost_found', label: 'Lost & Found', on: 'bg-lostfound-bg border-lostfound-border text-lostfound-light', off: 'bg-elevated border-border text-muted' },
 ]
 
 interface FilterPanelProps {

@@ -24,7 +24,6 @@ interface MapViewProps {
   leoAlerts: LeoAlert[]
   trailAlerts: TrailAlert[]
   citations: Citation[]
-  lostFound: LostFoundPost[]
   activeTypes: Set<AlertType>
   onAlertClick: (type: AlertType, data: LeoAlert | TrailAlert | Citation | LostFoundPost) => void
   placingPin: boolean
@@ -46,7 +45,6 @@ export function MapView({
   leoAlerts,
   trailAlerts,
   citations,
-  lostFound,
   activeTypes,
   onAlertClick,
   placingPin,
@@ -97,7 +95,6 @@ export function MapView({
         leoAlerts={activeTypes.has('leo') ? leoAlerts : []}
         trailAlerts={activeTypes.has('trail') ? trailAlerts : []}
         citations={activeTypes.has('citation') ? citations : []}
-        lostFound={activeTypes.has('lost_found') ? lostFound : []}
         onAlertClick={onAlertClick}
         placingPin={placingPin}
         pendingPos={pendingPos}

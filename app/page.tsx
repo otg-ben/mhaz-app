@@ -11,6 +11,7 @@ import { BottomNav } from '@/components/layout/BottomNav'
 import { EmailFeed } from '@/components/email/EmailFeed'
 import { TopBar } from '@/components/layout/TopBar'
 import { AuthModal } from '@/components/auth/AuthModal'
+import { PendingApproval } from '@/components/auth/PendingApproval'
 import { useAuth } from '@/contexts/AuthContext'
 import { useToast } from '@/contexts/ToastContext'
 import { isInValidRegion } from '@/lib/mapbox/bounds'
@@ -25,7 +26,7 @@ const fetcher = (url: string) => fetch(url).then(r => r.json())
 const ALL_TYPES = new Set<AlertType>(['leo', 'trail', 'citation', 'lost_found'])
 
 export default function HomePage() {
-  const { user, loading: authLoading } = useAuth()
+  const { user, profile, isApproved, loading: authLoading } = useAuth()
   const { toast } = useToast()
 
   // All hooks must be declared before any conditional return
@@ -124,6 +125,11 @@ export default function HomePage() {
 
   if (!user) {
     return <AuthGate />
+  }
+
+  // Signed in but not yet let in by an admin — RLS blocks their data either way
+  if (profile && !isApproved) {
+    return <PendingApproval />
   }
 
   return (

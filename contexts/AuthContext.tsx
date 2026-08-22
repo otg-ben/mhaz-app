@@ -11,6 +11,8 @@ interface AuthContextValue {
   profile: UserProfile | null
   loading: boolean
   isAdmin: boolean
+  isMod: boolean
+  isApproved: boolean
   signIn: (email: string, password: string) => Promise<{ error: string | null }>
   signUp: (email: string, password: string, handle: string) => Promise<{ error: string | null }>
   signOut: () => Promise<void>
@@ -103,11 +105,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setProfile(null)
   }
 
-  const isAdmin = profile?.is_admin === true
+  const isAdmin = profile?.is_admin === true || profile?.role === 'admin'
+  // Mods and admins can post announcements and advisories
+  const isMod = isAdmin || profile?.role === 'mod'
+  // New accounts stay unapproved until an admin lets them in (enforced in RLS too)
+  const isApproved = profile?.approved === true
 
   return (
     <AuthContext.Provider value={{
-      user, session, profile, loading, isAdmin,
+      user, session, profile, loading, isAdmin, isMod, isApproved,
       signIn, signUp, signOut, refreshProfile,
     }}>
       {children}

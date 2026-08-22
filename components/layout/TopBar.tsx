@@ -1,6 +1,6 @@
 'use client'
 
-import { Bell, LogOut, Shield } from 'lucide-react'
+import { Bell, LogOut, Shield, UserCheck } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
@@ -10,7 +10,7 @@ interface TopBarProps {
 }
 
 export function TopBar({ onAuthClick }: TopBarProps) {
-  const { user, profile, isAdmin, signOut } = useAuth()
+  const { user, profile, isAdmin, isMod, signOut } = useAuth()
   const router = useRouter()
 
   return (
@@ -31,6 +31,15 @@ export function TopBar({ onAuthClick }: TopBarProps) {
         <div className="flex items-center gap-1">
           {user ? (
             <>
+              {isMod && (
+                <button
+                  onClick={() => router.push('/admin/approvals')}
+                  className="p-2 rounded-lg text-mhaz hover:bg-elevated transition-colors"
+                  title="Account approvals"
+                >
+                  <UserCheck size={18} />
+                </button>
+              )}
               {isAdmin && (
                 <button
                   onClick={() => router.push('/admin/queue')}

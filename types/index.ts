@@ -46,7 +46,13 @@ export interface UserProfile {
   created_at: string
   updated_at: string
   is_admin?: boolean
+  role?: UserRole
+  approved?: boolean
+  approved_at?: string | null
+  approved_by?: string | null
 }
+
+export type UserRole = 'user' | 'mod' | 'admin'
 
 // ─── Alerts ──────────────────────────────────────────────────────────────────
 

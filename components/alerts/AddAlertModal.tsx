@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/Button'
 import { PhotoPicker } from '@/components/ui/PhotoPicker'
 import { useToast } from '@/contexts/ToastContext'
 import { formatCoords } from '@/lib/mapbox/bounds'
-import type { AlertType, LeoAgency, TrailIssueType } from '@/types'
+import type { AlertType, LeoAgency, TrailIssueType, LostFoundType } from '@/types'
 import { cn } from '@/lib/utils'
 
 const LEO_AGENCIES: LeoAgency[] = [
@@ -52,6 +52,10 @@ export function AddAlertModal({
   const [issueType, setIssueType] = useState<TrailIssueType>('downed_tree')
   const [photos, setPhotos] = useState<string[]>([])
 
+  // Lost & Found fields
+  const [lfType, setLfType] = useState<LostFoundType>('lost')
+  const [locationText, setLocationText] = useState('')
+
   // Citation fields
   const [incidentDate, setIncidentDate] = useState(
     new Date().toISOString().slice(0, 16) // datetime-local format
@@ -65,7 +69,8 @@ export function AddAlertModal({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!lat || !lng || !alertType) return
+    if (!alertType) return
+    if (alertType !== 'lost_found' && (!lat || !lng)) return
     setSubmitting(true)
 
     try {
@@ -75,11 +80,16 @@ export function AddAlertModal({
         alertType === 'citation' ? '/api/citations' :
         '/api/lost-found'
 
-      const body: Record<string, unknown> = { lat, long: lng, description }
+      const body: Record<string, unknown> = { description }
+      if (lat != null && lng != null) { body.lat = lat; body.long = lng }
       if (alertType === 'leo' || alertType === 'citation') body.agency = agency
       if (alertType === 'trail') { body.issue_type = issueType; body.photos = photos }
       if (alertType === 'citation') body.incident_date = new Date(incidentDate).toISOString()
-      if (alertType === 'lost_found') body.type = 'lost' // default; could add toggle
+      if (alertType === 'lost_found') {
+        body.type = lfType
+        body.photos = photos
+        body.location_text = locationText
+      }
 
       const res = await fetch(endpoint, {
         method: 'POST',
@@ -92,9 +102,11 @@ export function AddAlertModal({
         throw new Error(err.error ?? 'Submission failed')
       }
 
-      toast('Alert posted!', 'success')
+      toast(alertType === 'lost_found' ? 'Post created!' : 'Alert posted!', 'success')
       setDescription('')
       setPhotos([])
+      setLocationText('')
+      setLfType('lost')
       onSuccess()
       onClose()
     } catch (err) {
@@ -175,20 +187,43 @@ export function AddAlertModal({
           <div>
             <label className="block text-xs font-medium text-secondary mb-1.5">Type</label>
             <div className="grid grid-cols-2 gap-2">
-              {['lost', 'found'].map(t => (
-                <button key={t} type="button" className={cn(
-                  'px-3 py-2 rounded-xl text-xs font-medium border transition-colors capitalize',
-                  'bg-lostfound-bg border-lostfound-border text-lostfound',
-                )}>
-                  {t}
+              {(['lost', 'found'] as const).map(t => (
+                <button
+                  key={t}
+                  type="button"
+                  onClick={() => setLfType(t)}
+                  className={cn(
+                    'px-3 py-2 rounded-xl text-xs font-medium border transition-colors capitalize',
+                    lfType === t
+                      ? 'bg-lostfound-bg border-lostfound-border text-lostfound'
+                      : 'bg-surface border-border text-secondary hover:text-primary',
+                  )}
+                >
+                  {t === 'lost' ? 'I lost this' : 'I found this'}
                 </button>
               ))}
             </div>
           </div>
         )}
 
-        {/* Trail: Photos */}
-        {alertType === 'trail' && (
+        {/* Lost & Found: where */}
+        {alertType === 'lost_found' && (
+          <div>
+            <label className="block text-xs font-medium text-secondary mb-1.5">
+              Location <span className="text-muted font-normal">(optional)</span>
+            </label>
+            <input
+              type="text"
+              value={locationText}
+              onChange={e => setLocationText(e.target.value)}
+              placeholder="e.g. Tamarancho parking lot, near the kiosk"
+              className={inputClass}
+            />
+          </div>
+        )}
+
+        {/* Photos */}
+        {(alertType === 'trail' || alertType === 'lost_found') && (
           <div>
             <label className="block text-xs font-medium text-secondary mb-1.5">
               Photos <span className="text-muted font-normal">(up to 3, optional)</span>
@@ -226,7 +261,7 @@ export function AddAlertModal({
             Cancel
           </Button>
           <Button type="submit" variant="primary" loading={submitting} className="flex-1">
-            Post Alert
+            {alertType === 'lost_found' ? 'Post' : 'Post Alert'}
           </Button>
         </div>
       </form>

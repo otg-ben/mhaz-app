@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { timeRangeToDate } from '@/lib/utils'
+import { isInValidRegion } from '@/lib/mapbox/bounds'
 import type { TimeRange } from '@/types'
 
 export async function GET(req: NextRequest) {
@@ -24,16 +25,28 @@ export async function POST(req: NextRequest) {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const body = await req.json()
-  const { type, description, location_text, lat, long: lng } = body
+  const { type, description, location_text, lat, long: lng, photos } = body
 
   if (!description) return NextResponse.json({ error: 'Description required' }, { status: 400 })
   if (!type || !['lost', 'found'].includes(type)) {
     return NextResponse.json({ error: 'Type must be lost or found' }, { status: 400 })
   }
+  // Coordinates are optional here, but must be in-region when given
+  if (lat != null && lng != null && !isInValidRegion(lat, lng)) {
+    return NextResponse.json({ error: 'Location must be within Marin County / southern Sonoma' }, { status: 400 })
+  }
 
   const { data, error } = await supabase
     .from('lost_found')
-    .insert({ user_id: user.id, type, description, location_text, lat, long: lng })
+    .insert({
+      user_id: user.id,
+      type,
+      description,
+      location_text: location_text || null,
+      lat: lat ?? null,
+      long: lng ?? null,
+      photos: Array.isArray(photos) ? photos : [],
+    })
     .select()
     .single()
 

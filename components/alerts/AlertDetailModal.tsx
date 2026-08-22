@@ -32,11 +32,17 @@ export function AlertDetailModal({ open, onClose, type, data, onUpdate, onGoToMa
   const [deleteLoading, setDeleteLoading] = useState(false)
   const [viewerIndex, setViewerIndex] = useState<number | null>(null)
 
-  const photos = type === 'trail' ? ((data as TrailAlert).photos ?? []) : []
+  const photos = type === 'trail'
+    ? ((data as TrailAlert).photos ?? [])
+    : type === 'lost_found'
+      ? ((data as LostFoundPost).photos ?? [])
+      : []
 
   const isOwner = user?.id === data.user_id
   const createdAt = new Date(data.created_at)
-  const canEdit = isOwner && (Date.now() - createdAt.getTime()) < 24 * 60 * 60 * 1000
+  const canEdit = isOwner && (
+    type === 'lost_found' || (Date.now() - createdAt.getTime()) < 24 * 60 * 60 * 1000
+  )
 
   // Follow state
   const { data: followData, mutate: mutatFollow } = useSWR<{ following: boolean }>(
@@ -110,7 +116,10 @@ export function AlertDetailModal({ open, onClose, type, data, onUpdate, onGoToMa
     (type === 'trail' && (data as TrailAlert).status === 'resolved') ||
     (type === 'lost_found' && (data as LostFoundPost).status === 'resolved')
 
-  const canResolve = user && !isResolved && (type === 'trail' || type === 'lost_found')
+  // Trail issues are community-resolvable; lost & found is the poster's call only
+  const canResolve = user && !isResolved && (
+    type === 'trail' || (type === 'lost_found' && isOwner)
+  )
 
   const hasCoords = type !== 'lost_found' || (data as LostFoundPost).lat != null
 
@@ -217,6 +226,14 @@ export function AlertDetailModal({ open, onClose, type, data, onUpdate, onGoToMa
               className="col-span-2"
             />
           )}
+          {type === 'lost_found' && (data as LostFoundPost).location_text && (
+            <MetaItem
+              icon={<MapPin size={15} />}
+              label="Location"
+              value={(data as LostFoundPost).location_text!}
+              className="col-span-2"
+            />
+          )}
           {type === 'citation' && (
             <MetaItem
               icon={<Clock size={15} />}
@@ -254,7 +271,9 @@ export function AlertDetailModal({ open, onClose, type, data, onUpdate, onGoToMa
                 className="flex-1"
               >
                 <CheckCircle2 size={14} />
-                Mark Resolved
+                {type === 'lost_found'
+                  ? ((data as LostFoundPost).type === 'lost' ? 'Mark Recovered' : 'Mark Claimed')
+                  : 'Mark Resolved'}
               </Button>
             )}
             {canEdit && (

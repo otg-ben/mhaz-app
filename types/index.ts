@@ -32,6 +32,37 @@ export type CitationInfractionType =
 
 export type LostFoundType = 'lost' | 'found'
 
+export type RsvpStatus = 'going' | 'not_going'
+
+export interface EventRsvp {
+  id: string
+  event_id: string
+  user_id: string
+  status: RsvpStatus
+  created_at: string
+  user?: Pick<UserProfile, 'handle'>
+}
+
+export interface EventPost {
+  id: string
+  user_id: string
+  title: string
+  description: string
+  hosted_by: string | null
+  image_url: string | null
+  starts_at: string
+  ends_at: string | null
+  location_text: string | null
+  lat: number | null
+  long: number | null
+  created_at: string
+  updated_at: string
+  user?: Pick<UserProfile, 'handle'>
+  rsvps?: EventRsvp[]
+}
+
+export type EventScope = 'upcoming' | 'past'
+
 export type ActiveView = 'map' | 'feed' | 'email' | 'community' | 'dms'
 export type CommunityTab = 'lost_found' | 'events'
 export type LostFoundStatus = 'open' | 'resolved'

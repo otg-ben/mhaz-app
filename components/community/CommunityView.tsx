@@ -3,16 +3,18 @@
 import { useState } from 'react'
 import { cn } from '@/lib/utils'
 import { LostFoundFeed } from './LostFoundFeed'
-import type { CommunityTab, LostFoundPost } from '@/types'
+import { EventsFeed } from '@/components/events/EventsFeed'
+import type { CommunityTab, LostFoundPost, EventPost } from '@/types'
 
 interface CommunityViewProps {
   onPostClick: (post: LostFoundPost) => void
+  onEventClick: (event: EventPost) => void
   onCreateLostFound: () => void
   refreshKey?: number
 }
 
 export function CommunityView({
-  onPostClick, onCreateLostFound, refreshKey,
+  onPostClick, onEventClick, onCreateLostFound, refreshKey,
 }: CommunityViewProps) {
   const [tab, setTab] = useState<CommunityTab>('lost_found')
 
@@ -47,13 +49,7 @@ export function CommunityView({
             refreshKey={refreshKey}
           />
         ) : (
-          <div className="flex flex-col items-center justify-center h-full px-8 text-center">
-            <div className="text-3xl mb-3">🚵</div>
-            <p className="text-secondary text-sm mb-1">Rides &amp; events coming next</p>
-            <p className="text-muted text-xs">
-              Group rides, trail work days, and community events with RSVPs.
-            </p>
-          </div>
+          <EventsFeed onEventClick={onEventClick} refreshKey={refreshKey} />
         )}
       </div>
     </div>

@@ -10,6 +10,7 @@ import { AddAlertFAB } from '@/components/alerts/AddAlertFAB'
 import { BottomNav } from '@/components/layout/BottomNav'
 import { EmailFeed } from '@/components/email/EmailFeed'
 import { CommunityView } from '@/components/community/CommunityView'
+import { EventDetailModal } from '@/components/events/EventDetailModal'
 import { TopBar } from '@/components/layout/TopBar'
 import { AuthModal } from '@/components/auth/AuthModal'
 import { PendingApproval } from '@/components/auth/PendingApproval'
@@ -18,7 +19,7 @@ import { useToast } from '@/contexts/ToastContext'
 import { isInValidRegion } from '@/lib/mapbox/bounds'
 import type {
   AlertType, LeoAlert, TrailAlert, Citation,
-  TimeRange, SelectedAlert, ActiveView,
+  TimeRange, SelectedAlert, ActiveView, EventPost,
 } from '@/types'
 import { cn } from '@/lib/utils'
 
@@ -45,6 +46,7 @@ export default function HomePage() {
   const [placingPinFor, setPlacingPinFor] = useState<AlertType | null>(null)
   const [initialPinPos, setInitialPinPos] = useState<{ lat: number; lng: number } | null>(null)
   const [communityKey, setCommunityKey] = useState(0)
+  const [selectedEvent, setSelectedEvent] = useState<EventPost | null>(null)
 
   const { data: leoData,   mutate: leoMutate }   = useSWR<{ data: LeoAlert[] }>(
     user ? `/api/alerts/leo?range=${timeRange}` : null, fetcher)
@@ -208,6 +210,7 @@ export default function HomePage() {
           )}>
             <CommunityView
               onPostClick={post => setSelectedAlert({ type: 'lost_found', data: post })}
+              onEventClick={setSelectedEvent}
               onCreateLostFound={handleCreateLostFound}
               refreshKey={communityKey}
             />
@@ -242,6 +245,15 @@ export default function HomePage() {
           data={selectedAlert.data}
           onUpdate={refreshAll}
           onGoToMap={handleGoToMap}
+        />
+      )}
+
+      {selectedEvent && (
+        <EventDetailModal
+          open
+          onClose={() => setSelectedEvent(null)}
+          event={selectedEvent}
+          onUpdate={() => setCommunityKey(k => k + 1)}
         />
       )}
 

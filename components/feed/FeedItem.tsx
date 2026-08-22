@@ -38,9 +38,12 @@ export function FeedItem({ type, data, onClick, onShowOnMap, commentCount = 0 }:
   const isMhaz = (data as LeoAlert).source === 'mhaz'
 
   return (
-    <button
+    <div
+      role="button"
+      tabIndex={0}
       onClick={onClick}
-      className="w-full text-left px-4 py-3.5 hover:bg-elevated/50 transition-colors border-b border-border last:border-0 active:bg-elevated"
+      onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick() } }}
+      className="w-full cursor-pointer text-left px-4 py-3.5 hover:bg-elevated/50 transition-colors border-b border-border last:border-0 active:bg-elevated focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
     >
       <div className="flex items-start gap-3">
         {/* Left: type indicator */}
@@ -83,6 +86,6 @@ export function FeedItem({ type, data, onClick, onShowOnMap, commentCount = 0 }:
           </div>
         </div>
       </div>
-    </button>
+    </div>
   )
 }

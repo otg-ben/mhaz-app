@@ -48,6 +48,13 @@ const config: Config = {
           border: '#166534',
           pin: '#4ade80',
         },
+        event: {
+          DEFAULT: '#f97316',
+          light: '#fb923c',
+          bg: '#331303',
+          border: '#c2410c',
+          pin: '#fb923c',
+        },
         // Brand
         brand: {
           DEFAULT: '#3fb950',

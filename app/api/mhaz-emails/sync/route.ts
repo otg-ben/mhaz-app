@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
-import { fetchMhazEmailsSince } from '@/lib/gmail/client'
+import { fetchMhazEmailsSince } from '@/lib/mail/imap'
 
 const COOLDOWN_MINUTES = 10
 

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { sendAlertEmail } from '@/lib/mail/send'
 import { timeRangeToDate } from '@/lib/utils'
 import { isInValidRegion } from '@/lib/mapbox/bounds'
 import type { TimeRange } from '@/types'
@@ -51,5 +52,9 @@ export async function POST(req: NextRequest) {
     .single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  const { data: profile } = await supabase.from('users').select('handle').eq('id', user.id).single()
+  await sendAlertEmail({ type: 'trail', data, handle: profile?.handle ?? 'a rider' }, data.id)
+
   return NextResponse.json({ data }, { status: 201 })
 }

@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { timeRangeToDate } from '@/lib/utils'
 import { isInValidRegion } from '@/lib/mapbox/bounds'
 import { isModUser } from '@/lib/auth/roles'
+import { sendAlertEmail } from '@/lib/mail/send'
 import type { TimeRange } from '@/types'
 
 export async function GET(req: NextRequest) {
@@ -62,5 +63,12 @@ export async function POST(req: NextRequest) {
     .single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  // Advisories are announced in-app, not emailed. Sending never blocks the post.
+  if (!advisory) {
+    const { data: profile } = await supabase.from('users').select('handle').eq('id', user.id).single()
+    await sendAlertEmail({ type: 'leo', data, handle: profile?.handle ?? 'a rider' }, data.id)
+  }
+
   return NextResponse.json({ data }, { status: 201 })
 }

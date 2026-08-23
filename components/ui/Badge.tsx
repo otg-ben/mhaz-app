@@ -1,3 +1,4 @@
+import { Mail, Siren } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { AlertType } from '@/types'
 
@@ -27,13 +28,23 @@ const TYPE_LABELS: Record<string, string> = {
   resolved: 'Resolved',
 }
 
+// An icon on these two says at a glance where the item came from:
+// an envelope for list mail, a siren for standing advisories.
+const TYPE_ICONS: Record<string, React.ReactNode> = {
+  mhaz: <Mail size={11} />,
+  advisory: <Siren size={11} />,
+}
+
 export function Badge({ type, label, className }: BadgeProps) {
+  const icon = TYPE_ICONS[type]
+
   return (
     <span className={cn(
-      'inline-flex items-center px-2 py-0.5 rounded-md text-xs font-semibold border',
+      'inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-semibold border',
       TYPE_STYLES[type],
       className,
     )}>
+      {icon}
       {label ?? TYPE_LABELS[type]}
     </span>
   )

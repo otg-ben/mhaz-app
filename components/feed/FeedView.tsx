@@ -84,7 +84,12 @@ export function FeedView({
     // MHAZ emails sort by when they landed in the inbox, not when we ingested them
     const at = (i: UnifiedItem) =>
       new Date(i._type === 'mhaz' ? i.data.received_at : i.data.created_at).getTime()
-    return all.sort((a, b) => at(b) - at(a))
+
+    // Active advisories are standing warnings — pin them above the timeline
+    const pinned = (i: UnifiedItem) =>
+      i._type === 'leo' && i.data.is_advisory === true ? 1 : 0
+
+    return all.sort((a, b) => (pinned(b) - pinned(a)) || (at(b) - at(a)))
   }, [leoData, trailData, citData, mhazData])
 
   return (

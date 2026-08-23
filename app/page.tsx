@@ -10,6 +10,7 @@ import { AddAlertFAB } from '@/components/alerts/AddAlertFAB'
 import { BottomNav } from '@/components/layout/BottomNav'
 import { CommunityView } from '@/components/community/CommunityView'
 import { EventDetailModal } from '@/components/events/EventDetailModal'
+import { DMView } from '@/components/dm/DMView'
 import { TopBar } from '@/components/layout/TopBar'
 import { AuthModal } from '@/components/auth/AuthModal'
 import { PendingApproval } from '@/components/auth/PendingApproval'
@@ -46,6 +47,7 @@ export default function HomePage() {
   const [initialPinPos, setInitialPinPos] = useState<{ lat: number; lng: number } | null>(null)
   const [communityKey, setCommunityKey] = useState(0)
   const [selectedEvent, setSelectedEvent] = useState<EventPost | null>(null)
+  const [dmTarget, setDmTarget] = useState<{ id: string; handle: string } | null>(null)
 
   const { data: leoData,   mutate: leoMutate }   = useSWR<{ data: LeoAlert[] }>(
     user ? `/api/alerts/leo?range=${timeRange}` : null, fetcher)
@@ -53,6 +55,9 @@ export default function HomePage() {
     user ? `/api/alerts/trail?range=${timeRange}&resolved=${showResolved}` : null, fetcher)
   const { data: citData,   mutate: citMutate }   = useSWR<{ data: Citation[] }>(
     user ? `/api/citations?range=${timeRange}` : null, fetcher)
+
+  const { data: unreadData, mutate: unreadMutate } = useSWR<{ count: number }>(
+    user ? '/api/dms/unread' : null, fetcher, { refreshInterval: 30000 })
 
   const refreshAll = useCallback(() => {
     leoMutate(); trailMutate(); citMutate()
@@ -212,10 +217,11 @@ export default function HomePage() {
             'flex-col border-l border-border bg-surface',
             activeView === 'dms' ? 'flex flex-1 md:w-[420px] md:flex-none' : 'hidden',
           )}>
-            <div className="flex flex-col items-center justify-center h-full px-8 text-center">
-              <p className="text-secondary text-sm mb-1">Direct messages coming soon</p>
-              <p className="text-muted text-xs">Message riders about lost &amp; found posts.</p>
-            </div>
+            <DMView
+              initialThreadUser={dmTarget}
+              onThreadOpened={() => setDmTarget(null)}
+              onUnreadChange={() => unreadMutate()}
+            />
           </div>
         </div>
       </div>
@@ -224,7 +230,11 @@ export default function HomePage() {
         <AddAlertFAB onSelect={handleFABSelect} />
       )}
 
-      <BottomNav activeView={activeView} onViewChange={setActiveView} />
+      <BottomNav
+        activeView={activeView}
+        onViewChange={setActiveView}
+        unreadDMs={unreadData?.count ?? 0}
+      />
 
       <AuthModal open={authOpen} onClose={() => setAuthOpen(false)} />
 
@@ -236,6 +246,11 @@ export default function HomePage() {
           data={selectedAlert.data}
           onUpdate={refreshAll}
           onGoToMap={handleGoToMap}
+          onMessageUser={(id, handle) => {
+            setSelectedAlert(null)
+            setDmTarget({ id, handle })
+            setActiveView('dms')
+          }}
         />
       )}
 

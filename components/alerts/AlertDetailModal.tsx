@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import useSWR from 'swr'
-import { MapPin, Clock, User, Bell, BellOff, CheckCircle2, Trash2, Edit2, Navigation } from 'lucide-react'
+import { MapPin, Clock, User, Bell, BellOff, CheckCircle2, Trash2, Edit2, Navigation, MessageCircle } from 'lucide-react'
 import { Modal } from '@/components/ui/Modal'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
@@ -23,9 +23,10 @@ interface AlertDetailModalProps {
   data: LeoAlert | TrailAlert | Citation | LostFoundPost
   onUpdate: () => void
   onGoToMap?: (lat: number, lng: number) => void
+  onMessageUser?: (userId: string, handle: string) => void
 }
 
-export function AlertDetailModal({ open, onClose, type, data, onUpdate, onGoToMap }: AlertDetailModalProps) {
+export function AlertDetailModal({ open, onClose, type, data, onUpdate, onGoToMap, onMessageUser }: AlertDetailModalProps) {
   const { user } = useAuth()
   const { toast } = useToast()
   const [resolveLoading, setResolveLoading] = useState(false)
@@ -255,6 +256,19 @@ export function AlertDetailModal({ open, onClose, type, data, onUpdate, onGoToMa
         </div>
 
         {/* Actions */}
+        {/* Reach the poster about their lost & found item */}
+        {type === 'lost_found' && !isOwner && onMessageUser && (
+          <Button
+            variant="secondary"
+            size="sm"
+            className="w-full"
+            onClick={() => onMessageUser(data.user_id, (data as LostFoundPost).user?.handle ?? '')}
+          >
+            <MessageCircle size={14} />
+            Message @{(data as LostFoundPost).user?.handle ?? '—'}
+          </Button>
+        )}
+
         {(canResolve || canEdit) && (
           <div className="flex gap-2 pt-1">
             {canResolve && (

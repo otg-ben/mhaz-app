@@ -32,6 +32,27 @@ export type CitationInfractionType =
 
 export type LostFoundType = 'lost' | 'found'
 
+export interface DirectMessage {
+  id: string
+  sender_id: string
+  recipient_id: string
+  body: string
+  status: 'sent' | 'read'
+  created_at: string
+  read_at: string | null
+  sender?: Pick<UserProfile, 'handle'>
+  recipient?: Pick<UserProfile, 'handle'>
+}
+
+export interface DMConversation {
+  userId: string
+  handle: string
+  lastMessage: string
+  lastAt: string
+  lastFromMe: boolean
+  unread: number
+}
+
 export type RsvpStatus = 'going' | 'not_going'
 
 export interface EventRsvp {

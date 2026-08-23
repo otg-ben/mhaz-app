@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import useSWR from 'swr'
-import { CalendarDays, MapPin, User, Users, Check, X, Trash2 } from 'lucide-react'
+import { CalendarDays, MapPin, User, Users, Check, X, Trash2, Send } from 'lucide-react'
 import { Modal } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
 import { PhotoViewer } from '@/components/ui/PhotoViewer'
@@ -31,6 +31,9 @@ export function EventDetailModal({ open, onClose, event: initial, onUpdate }: Ev
   const [busy, setBusy] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [viewerOpen, setViewerOpen] = useState(false)
+  const [broadcastOpen, setBroadcastOpen] = useState(false)
+  const [broadcast, setBroadcast] = useState('')
+  const [sendingBroadcast, setSendingBroadcast] = useState(false)
 
   const isOwner = user?.id === event.user_id
   const mine = myRsvp(event, user?.id)
@@ -55,6 +58,27 @@ export function EventDetailModal({ open, onClose, event: initial, onUpdate }: Ev
       toast(e instanceof Error ? e.message : 'Failed to RSVP', 'error')
     } finally {
       setBusy(false)
+    }
+  }
+
+  const sendBroadcast = async () => {
+    if (!broadcast.trim()) return
+    setSendingBroadcast(true)
+    try {
+      const res = await fetch(`/api/events/${event.id}/broadcast`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ body: broadcast }),
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error)
+      toast(`Message sent to ${json.sent} ${json.sent === 1 ? 'rider' : 'riders'}`, 'success')
+      setBroadcast('')
+      setBroadcastOpen(false)
+    } catch (e) {
+      toast(e instanceof Error ? e.message : 'Failed to send', 'error')
+    } finally {
+      setSendingBroadcast(false)
     }
   }
 
@@ -170,7 +194,48 @@ export function EventDetailModal({ open, onClose, event: initial, onUpdate }: Ev
           </div>
 
           {isOwner && (
-            <div className="flex gap-2 pt-1">
+            <div className="space-y-3 pt-1">
+              {/* Reach everyone who said they're coming */}
+              {goingCount(event) > 0 && !isPast && (
+                broadcastOpen ? (
+                  <div className="rounded-2xl bg-surface border border-border p-3 space-y-2">
+                    <p className="text-xs font-medium text-secondary">
+                      Message {goingCount(event)} attending {goingCount(event) === 1 ? 'rider' : 'riders'}
+                    </p>
+                    <textarea
+                      value={broadcast}
+                      onChange={e => setBroadcast(e.target.value)}
+                      rows={3}
+                      placeholder="e.g. Start moved to 9:30 — trail's still wet at the top"
+                      className="w-full px-3 py-2 rounded-xl text-sm text-primary bg-base border border-border focus:outline-none focus:border-brand transition-colors resize-none"
+                    />
+                    <div className="flex gap-2">
+                      <Button
+                        variant="secondary" size="sm" className="flex-1"
+                        onClick={() => { setBroadcastOpen(false); setBroadcast('') }}
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        variant="primary" size="sm" className="flex-1"
+                        loading={sendingBroadcast}
+                        disabled={!broadcast.trim()}
+                        onClick={sendBroadcast}
+                      >
+                        <Send size={14} />Send
+                      </Button>
+                    </div>
+                    <p className="text-[11px] text-muted">
+                      Sent as a direct message — riders can reply to you.
+                    </p>
+                  </div>
+                ) : (
+                  <Button variant="secondary" size="sm" className="w-full" onClick={() => setBroadcastOpen(true)}>
+                    <Send size={14} />Message attendees
+                  </Button>
+                )
+              )}
+
               <Button variant="danger" size="sm" loading={deleting} onClick={handleDelete} className="px-3">
                 <Trash2 size={14} />Delete event
               </Button>

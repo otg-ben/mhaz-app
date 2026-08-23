@@ -18,17 +18,40 @@ export interface ParsedEmail {
   receivedAt: Date
 }
 
+const GROUP_ADDRESS = 'mhaz@googlegroups.com'
+const GROUP_LIST_ID = 'mhaz.googlegroups.com'
+
+/**
+ * Membership in the feed is "was this delivered via the MHAZ group" — nothing
+ * else. Deliberately does NOT match on subject: Gmail's subject search is
+ * word-based and ignores punctuation, so subject:"[MHAZ]" also matched private
+ * mail that merely mentioned "the MHAZ list", which then surfaced to every user.
+ *
+ * `list:` reads the List-Id header, so it still matches when the group address
+ * appears only in Bcc — which is how most list replies arrive.
+ */
+function buildQuery(since: Date | null) {
+  const clauses = [
+    `{to:${GROUP_ADDRESS} cc:${GROUP_ADDRESS} list:${GROUP_LIST_ID}}`,
+  ]
+
+  // Our own posts come back through the group; they're already in the app
+  const self = process.env.MHAZ_GMAIL_ADDRESS
+  if (self) clauses.push(`-from:${self}`)
+
+  if (since) {
+    // Gmail's after: takes unix seconds
+    clauses.push(`after:${Math.floor(since.getTime() / 1000)}`)
+  }
+
+  return clauses.join(' ')
+}
+
 export async function fetchMhazEmailsSince(since: Date | null): Promise<ParsedEmail[]> {
   const auth  = getOAuthClient()
   const gmail = google.gmail({ version: 'v1', auth })
 
-  // Build query: [MHAZ] in subject, after a given date
-  let q = 'subject:"[MHAZ]"'
-  if (since) {
-    // Gmail after: filter uses unix timestamp in seconds
-    const epoch = Math.floor(since.getTime() / 1000)
-    q += ` after:${epoch}`
-  }
+  const q = buildQuery(since)
 
   const listRes = await gmail.users.messages.list({
     userId: 'me',

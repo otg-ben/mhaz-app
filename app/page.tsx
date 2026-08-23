@@ -11,6 +11,7 @@ import { BottomNav } from '@/components/layout/BottomNav'
 import { CommunityView } from '@/components/community/CommunityView'
 import { EventDetailModal } from '@/components/events/EventDetailModal'
 import { DMView } from '@/components/dm/DMView'
+import { AnnouncementPopup } from '@/components/announcements/AnnouncementPopup'
 import { TopBar } from '@/components/layout/TopBar'
 import { AuthModal } from '@/components/auth/AuthModal'
 import { PendingApproval } from '@/components/auth/PendingApproval'
@@ -235,6 +236,8 @@ export default function HomePage() {
         onViewChange={setActiveView}
         unreadDMs={unreadData?.count ?? 0}
       />
+
+      <AnnouncementPopup enabled={!!user && isApproved} />
 
       <AuthModal open={authOpen} onClose={() => setAuthOpen(false)} />
 

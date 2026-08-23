@@ -32,6 +32,17 @@ export type CitationInfractionType =
 
 export type LostFoundType = 'lost' | 'found'
 
+export interface Announcement {
+  id: string
+  user_id: string
+  title: string
+  body: string
+  starts_at: string
+  ends_at: string | null
+  created_at: string
+  user?: Pick<UserProfile, 'handle'>
+}
+
 export interface DirectMessage {
   id: string
   sender_id: string

@@ -1,6 +1,8 @@
 'use client'
 
-import { Bell, LogOut, Shield, UserCheck } from 'lucide-react'
+import { Bell, LogOut, Shield, UserCheck, Megaphone } from 'lucide-react'
+import { useState } from 'react'
+import { AddAnnouncementModal } from '@/components/announcements/AddAnnouncementModal'
 import { useAuth } from '@/contexts/AuthContext'
 import { useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
@@ -12,6 +14,7 @@ interface TopBarProps {
 export function TopBar({ onAuthClick }: TopBarProps) {
   const { user, profile, isAdmin, isMod, signOut } = useAuth()
   const router = useRouter()
+  const [announceOpen, setAnnounceOpen] = useState(false)
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-surface/90 backdrop-blur-md border-b border-border">
@@ -31,6 +34,15 @@ export function TopBar({ onAuthClick }: TopBarProps) {
         <div className="flex items-center gap-1">
           {user ? (
             <>
+              {isMod && (
+                <button
+                  onClick={() => setAnnounceOpen(true)}
+                  className="p-2 rounded-lg text-mhaz hover:bg-elevated transition-colors"
+                  title="Post announcement"
+                >
+                  <Megaphone size={18} />
+                </button>
+              )}
               {isMod && (
                 <button
                   onClick={() => router.push('/admin/approvals')}
@@ -89,6 +101,10 @@ export function TopBar({ onAuthClick }: TopBarProps) {
           )}
         </div>
       </div>
+
+      {isMod && (
+        <AddAnnouncementModal open={announceOpen} onClose={() => setAnnounceOpen(false)} />
+      )}
     </header>
   )
 }

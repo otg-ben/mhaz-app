@@ -14,9 +14,9 @@ interface AuthModalProps {
 }
 
 export function AuthModal({ open, onClose, defaultMode = 'login' }: AuthModalProps) {
-  const { signIn, signUp } = useAuth()
+  const { signIn, signUp, resetPassword } = useAuth()
   const { toast } = useToast()
-  const [mode, setMode] = useState<'login' | 'register'>(defaultMode)
+  const [mode, setMode] = useState<'login' | 'register' | 'forgot'>(defaultMode)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [handle, setHandle] = useState('')
@@ -29,6 +29,15 @@ export function AuthModal({ open, onClose, defaultMode = 'login' }: AuthModalPro
     setLoading(true)
 
     try {
+      // Recovery sends a link instead of signing in
+      if (mode === 'forgot') {
+        const { error } = await resetPassword(email)
+        if (error) { setError(error); return }
+        toast('Check your email for a reset link', 'success')
+        setMode('login')
+        return
+      }
+
       const result = mode === 'login'
         ? await signIn(email, password)
         : await signUp(email, password, handle)
@@ -54,12 +63,14 @@ export function AuthModal({ open, onClose, defaultMode = 'login' }: AuthModalPro
             <span className="text-2xl font-black text-base">M</span>
           </div>
           <h2 className="text-lg font-bold text-primary">
-            {mode === 'login' ? 'Sign in to MHAZ' : 'Join MHAZ'}
+            {mode === 'forgot' ? 'Reset your password' : mode === 'login' ? 'Sign in to MHAZ' : 'Join MHAZ'}
           </h2>
-          <p className="text-xs text-secondary mt-1">
-            {mode === 'login'
-              ? 'Community trail safety for Marin MTB'
-              : 'Submit alerts, comment, and follow updates'}
+          <p className="text-xs text-secondary mt-1 text-center">
+            {mode === 'forgot'
+              ? "We'll email you a link to set a new one"
+              : mode === 'login'
+                ? 'Community trail safety for Marin MTB'
+                : 'Submit alerts, comment, and follow updates'}
           </p>
         </div>
 
@@ -95,6 +106,7 @@ export function AuthModal({ open, onClose, defaultMode = 'login' }: AuthModalPro
             />
           </div>
 
+          {mode !== 'forgot' && (
           <div>
             <label className="block text-xs font-medium text-secondary mb-1.5">Password</label>
             <input
@@ -108,6 +120,7 @@ export function AuthModal({ open, onClose, defaultMode = 'login' }: AuthModalPro
               autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
             />
           </div>
+          )}
 
           {error && (
             <p className="text-xs text-citation-light bg-citation-bg border border-citation-border rounded-xl px-3 py-2">
@@ -116,12 +129,22 @@ export function AuthModal({ open, onClose, defaultMode = 'login' }: AuthModalPro
           )}
 
           <Button type="submit" variant="primary" loading={loading} className="w-full mt-1">
-            {mode === 'login' ? 'Sign in' : 'Create account'}
+            {mode === 'forgot' ? 'Send reset link' : mode === 'login' ? 'Sign in' : 'Create account'}
           </Button>
+
+          {mode === 'login' && (
+            <button
+              type="button"
+              onClick={() => { setMode('forgot'); setError(null) }}
+              className="block mx-auto text-xs text-muted hover:text-secondary transition-colors"
+            >
+              Forgot your password?
+            </button>
+          )}
         </form>
 
         <p className="text-center text-xs text-muted mt-4">
-          {mode === 'login' ? "Don't have an account? " : 'Already have an account? '}
+          {mode === 'forgot' ? 'Remembered it? ' : mode === 'login' ? "Don't have an account? " : 'Already have an account? '}
           <button
             onClick={() => { setMode(mode === 'login' ? 'register' : 'login'); setError(null) }}
             className="text-brand hover:text-brand-light transition-colors font-medium"

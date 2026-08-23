@@ -1,8 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import useSWR from 'swr'
-import { MapPin, Clock, User, Bell, BellOff, CheckCircle2, Trash2, Edit2, Navigation, MessageCircle } from 'lucide-react'
+import { MapPin, Clock, User, CheckCircle2, Trash2, Edit2, Navigation, MessageCircle } from 'lucide-react'
 import { Modal } from '@/components/ui/Modal'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
@@ -14,7 +13,6 @@ import { formatDate, LEO_AGENCY_LABELS, TRAIL_ISSUE_LABELS } from '@/lib/utils'
 import { formatCoords } from '@/lib/mapbox/bounds'
 import type { LeoAlert, TrailAlert, Citation, LostFoundPost, AlertType } from '@/types'
 
-const fetcher = (url: string) => fetch(url).then(r => r.json())
 
 interface AlertDetailModalProps {
   open: boolean
@@ -45,25 +43,7 @@ export function AlertDetailModal({ open, onClose, type, data, onUpdate, onGoToMa
     type === 'lost_found' || (Date.now() - createdAt.getTime()) < 24 * 60 * 60 * 1000
   )
 
-  // Follow state
-  const { data: followData, mutate: mutatFollow } = useSWR<{ following: boolean }>(
-    user ? `/api/follows/${type}/${data.id}` : null,
-    fetcher
-  )
-  const following = followData?.following ?? false
 
-  const toggleFollow = async () => {
-    if (!user) { toast('Sign in to follow alerts', 'info'); return }
-    try {
-      await fetch(`/api/follows/${type}/${data.id}`, {
-        method: following ? 'DELETE' : 'POST',
-      })
-      mutatFollow()
-      toast(following ? 'Unfollowed' : 'Following — you\'ll get email updates', 'success')
-    } catch {
-      toast('Failed to update follow', 'error')
-    }
-  }
 
   const handleResolve = async () => {
     if (!user) return
@@ -145,19 +125,6 @@ export function AlertDetailModal({ open, onClose, type, data, onUpdate, onGoToMa
             </div>
             <h2 className="text-xl font-semibold text-primary">{getTypeLabel()}</h2>
           </div>
-          {/* Follow button */}
-          {user && (
-            <button
-              onClick={toggleFollow}
-              className="flex-shrink-0 p-2 rounded-xl border border-border hover:bg-elevated transition-colors"
-              title={following ? 'Unfollow' : 'Follow'}
-            >
-              {following
-                ? <BellOff size={16} className="text-brand" />
-                : <Bell size={16} className="text-secondary" />
-              }
-            </button>
-          )}
         </div>
 
         {/* Description */}

@@ -292,7 +292,7 @@ function PopupCard({
 
   return (
     <div
-      className="bg-elevated border border-border rounded-xl p-3 min-w-[200px] max-w-[260px] cursor-pointer hover:bg-border/30 transition-colors"
+      className="bg-elevated border border-border rounded-xl p-3 min-w-[200px] max-w-[260px] cursor-pointer shadow-modal"
       onClick={onViewDetail}
     >
       <div className="flex items-center gap-2 mb-2">

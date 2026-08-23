@@ -49,7 +49,10 @@
   }
 }
 
-/* Mapbox popup reset */
+/* Mapbox popup reset — the card supplies its own solid background */
+.mapboxgl-popup {
+  opacity: 1 !important;
+}
 .mapboxgl-popup-content {
   background: transparent !important;
   box-shadow: none !important;

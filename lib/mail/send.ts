@@ -5,6 +5,11 @@ import { createAdminClient } from '@/lib/supabase/server'
 /**
  * Sends alert emails from the shared MHAZ mailbox over SMTP.
  *
+ * HARD RULE: only the creation of a trail, LEO or citation alert ever emails
+ * the list. Comments, replies, RSVPs, DMs, lost & found and advisories are
+ * contained entirely within the app. Do not add call sites beyond the three
+ * alert POST routes.
+ *
  * Two independent guards stand between this and the real mailing list:
  *   MHAZ_EMAIL_ENABLED must be exactly "true", and
  *   MHAZ_EMAIL_TO_OVERRIDE must be cleared.

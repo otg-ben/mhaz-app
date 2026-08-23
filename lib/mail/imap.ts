@@ -41,10 +41,19 @@ function client() {
  * private mail merely mentioning "the MHAZ list".
  */
 function gmailQuery(since: Date | null) {
-  const parts = [`{to:${GROUP_ADDRESS} cc:${GROUP_ADDRESS} list:${GROUP_LIST_ID}}`]
+  // in:anywhere reaches Spam and Trash, which "All Mail" deliberately excludes.
+  // Gmail flagged this group's own welcome message as spam, so list mail
+  // landing there is a real possibility and would otherwise vanish silently.
+  //
+  // Accepts either route: relayed by the group, or addressed straight to the
+  // app mailbox with the [MHAZ] tag. The subject clause is safe here because
+  // this is a dedicated mailbox — unlike a personal inbox, where matching on
+  // subject once pulled private correspondence into the feed.
+  const self = process.env.MHAZ_GMAIL_ADDRESS
+  const direct = self ? ` (to:${self} subject:"[MHAZ]")` : ''
+  const parts = [`in:anywhere {to:${GROUP_ADDRESS} cc:${GROUP_ADDRESS} list:${GROUP_LIST_ID}${direct}}`]
 
   // Our own posts come back through the group; they're already in the app
-  const self = process.env.MHAZ_GMAIL_ADDRESS
   if (self) parts.push(`-from:${self}`)
 
   if (since) parts.push(`after:${Math.floor(since.getTime() / 1000)}`)

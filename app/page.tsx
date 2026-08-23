@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import useSWR from 'swr'
 import { MapView } from '@/components/map/MapView'
 import { FeedView } from '@/components/feed/FeedView'
@@ -79,6 +79,18 @@ export default function HomePage() {
     setPendingPin(null)
     setAddAdvisory(false)
     setAddAlertType('lost_found')
+  }, [])
+
+  // Profile pages link back here as /?dm=<id>&handle=<handle>
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const id = params.get('dm')
+    const handle = params.get('handle')
+    if (id && handle) {
+      setDmTarget({ id, handle })
+      setActiveView('dms')
+      window.history.replaceState(null, '', window.location.pathname)
+    }
   }, [])
 
   const handleFABSelect = (type: AlertType, advisory = false) => {

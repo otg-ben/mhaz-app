@@ -12,9 +12,21 @@ export async function GET(req: NextRequest) {
   const status = req.nextUrl.searchParams.get('status') ?? 'pending'
   const admin = await createAdminClient()
 
+  // Name-change requests are their own review queue
+  if (status === 'renames') {
+    const { data, error } = await admin
+      .from('users')
+      .select('id, handle, email, location, role, approved, created_at, pending_handle, pending_handle_at')
+      .not('pending_handle', 'is', null)
+      .order('pending_handle_at', { ascending: true })
+
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    return NextResponse.json({ data })
+  }
+
   const { data, error } = await admin
     .from('users')
-    .select('id, handle, email, bio, role, approved, approved_at, created_at')
+    .select('id, handle, email, bio, location, role, approved, approved_at, created_at, pending_handle')
     .eq('approved', status === 'approved')
     .order('created_at', { ascending: status === 'pending' })
 

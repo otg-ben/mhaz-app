@@ -10,8 +10,30 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   if (!(await isModUser(user.id))) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
-  const { approved, role } = await req.json() as { approved?: boolean; role?: UserRole }
+  const { approved, role, handle_decision } = await req.json() as {
+    approved?: boolean; role?: UserRole; handle_decision?: 'approve' | 'reject'
+  }
   const patch: Record<string, unknown> = {}
+
+  // Approving a rename promotes pending_handle to handle; rejecting just clears it
+  if (handle_decision) {
+    const admin = await createAdminClient()
+    const { data: target } = await admin
+      .from('users').select('pending_handle').eq('id', params.id).single()
+    if (!target?.pending_handle) {
+      return NextResponse.json({ error: 'No pending name change' }, { status: 400 })
+    }
+    if (handle_decision === 'approve') {
+      const { data: taken } = await admin
+        .from('users').select('id').ilike('handle', target.pending_handle).maybeSingle()
+      if (taken && taken.id !== params.id) {
+        return NextResponse.json({ error: 'That name was taken in the meantime' }, { status: 409 })
+      }
+      patch.handle = target.pending_handle
+    }
+    patch.pending_handle = null
+    patch.pending_handle_at = null
+  }
 
   if (typeof approved === 'boolean') {
     patch.approved = approved

@@ -17,7 +17,7 @@ export default function AdminApprovalsPage() {
   const { isMod, isAdmin, loading } = useAuth()
   const { toast } = useToast()
   const router = useRouter()
-  const [tab, setTab] = useState<'pending' | 'approved'>('pending')
+  const [tab, setTab] = useState<'pending' | 'approved' | 'renames'>('pending')
   const [busy, setBusy] = useState<string | null>(null)
 
   const { data, mutate } = useSWR<{ data: UserProfile[] }>(
@@ -89,7 +89,7 @@ export default function AdminApprovalsPage() {
         </div>
 
         <div className="flex gap-2 px-4 pb-3 max-w-2xl mx-auto">
-          {(['pending', 'approved'] as const).map(t => (
+          {(['pending', 'approved', 'renames'] as const).map(t => (
             <button
               key={t}
               onClick={() => setTab(t)}
@@ -100,8 +100,8 @@ export default function AdminApprovalsPage() {
                   : 'bg-elevated border border-border text-secondary hover:text-primary',
               )}
             >
-              {t}
-              {t === 'pending' && tab === 'pending' && users.length > 0 && ` (${users.length})`}
+              {t === 'renames' ? 'Name changes' : t}
+              {tab === t && users.length > 0 && ` (${users.length})`}
             </button>
           ))}
         </div>
@@ -114,7 +114,9 @@ export default function AdminApprovalsPage() {
           </div>
         ) : users.length === 0 ? (
           <p className="text-center text-secondary text-sm py-12">
-            {tab === 'pending' ? 'No accounts waiting for approval.' : 'No approved accounts yet.'}
+            {tab === 'pending' ? 'No accounts waiting for approval.'
+              : tab === 'renames' ? 'No name changes waiting for review.'
+              : 'No approved accounts yet.'}
           </p>
         ) : (
           <ul className="flex flex-col gap-2">
@@ -137,6 +139,11 @@ export default function AdminApprovalsPage() {
                       )}
                     </div>
                     <p className="text-xs text-secondary truncate">{u.email}</p>
+                    {tab === 'renames' && u.pending_handle && (
+                      <p className="text-xs text-mhaz mt-0.5">
+                        wants to be <strong>@{u.pending_handle}</strong>
+                      </p>
+                    )}
                     <p className="text-[11px] text-secondary/70 mt-0.5">
                       signed up {timeAgo(u.created_at)}
                     </p>
@@ -144,7 +151,24 @@ export default function AdminApprovalsPage() {
                 </div>
 
                 <div className="flex gap-2 mt-3">
-                  {tab === 'pending' ? (
+                  {tab === 'renames' ? (
+                    <>
+                      <Button
+                        variant="primary" size="sm" className="flex-1"
+                        loading={busy === u.id}
+                        onClick={() => patch(u.id, { handle_decision: 'approve' }, `@${u.handle} is now @${u.pending_handle}`)}
+                      >
+                        <Check size={14} />Approve name
+                      </Button>
+                      <Button
+                        variant="ghost" size="sm"
+                        loading={busy === u.id}
+                        onClick={() => patch(u.id, { handle_decision: 'reject' }, 'Name change declined')}
+                      >
+                        <X size={14} />Decline
+                      </Button>
+                    </>
+                  ) : tab === 'pending' ? (
                     <>
                       <Button
                         variant="primary" size="sm" className="flex-1"

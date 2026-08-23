@@ -119,6 +119,9 @@ export interface UserProfile {
   approved?: boolean
   approved_at?: string | null
   approved_by?: string | null
+  location?: string | null
+  pending_handle?: string | null
+  pending_handle_at?: string | null
 }
 
 export type UserRole = 'user' | 'mod' | 'admin'

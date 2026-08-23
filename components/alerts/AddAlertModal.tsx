@@ -28,6 +28,7 @@ interface AddAlertModalProps {
   open: boolean
   onClose: () => void
   alertType: AlertType | null
+  advisory?: boolean
   lat: number | null
   lng: number | null
   onSuccess: () => void
@@ -37,6 +38,7 @@ export function AddAlertModal({
   open,
   onClose,
   alertType,
+  advisory = false,
   lat,
   lng,
   onSuccess,
@@ -56,12 +58,16 @@ export function AddAlertModal({
   const [lfType, setLfType] = useState<LostFoundType>('lost')
   const [locationText, setLocationText] = useState('')
 
+  // Advisory: mods pick how long it stays pinned to the map
+  const [advisoryUntil, setAdvisoryUntil] = useState('')
+
   // Citation fields
   const [incidentDate, setIncidentDate] = useState(
     new Date().toISOString().slice(0, 16) // datetime-local format
   )
 
   const title =
+    advisory ? 'Post an Advisory' :
     alertType === 'leo' ? 'Report LEO Sighting' :
     alertType === 'trail' ? 'Report Trail Issue' :
     alertType === 'citation' ? 'Report Citation' :
@@ -83,6 +89,10 @@ export function AddAlertModal({
       const body: Record<string, unknown> = { description }
       if (lat != null && lng != null) { body.lat = lat; body.long = lng }
       if (alertType === 'leo' || alertType === 'citation') body.agency = agency
+      if (advisory) {
+        body.is_advisory = true
+        body.expires_at = new Date(`${advisoryUntil}T23:59`).toISOString()
+      }
       if (alertType === 'trail') { body.issue_type = issueType; body.photos = photos }
       if (alertType === 'citation') body.incident_date = new Date(incidentDate).toISOString()
       if (alertType === 'lost_found') {
@@ -102,11 +112,12 @@ export function AddAlertModal({
         throw new Error(err.error ?? 'Submission failed')
       }
 
-      toast(alertType === 'lost_found' ? 'Post created!' : 'Alert posted!', 'success')
+      toast(advisory ? 'Advisory posted!' : alertType === 'lost_found' ? 'Post created!' : 'Alert posted!', 'success')
       setDescription('')
       setPhotos([])
       setLocationText('')
       setLfType('lost')
+      setAdvisoryUntil('')
       onSuccess()
       onClose()
     } catch (err) {
@@ -165,6 +176,23 @@ export function AddAlertModal({
                 </button>
               ))}
             </div>
+          </div>
+        )}
+
+        {/* Advisory: how long it stays up */}
+        {advisory && (
+          <div>
+            <label className="block text-xs font-medium text-secondary mb-1.5">
+              Show until <span className="text-muted font-normal">(stays pinned to the map)</span>
+            </label>
+            <input
+              type="date"
+              value={advisoryUntil}
+              onChange={e => setAdvisoryUntil(e.target.value)}
+              min={new Date(Date.now() + 864e5).toISOString().slice(0, 10)}
+              className={inputClass}
+              required
+            />
           </div>
         )}
 
@@ -261,7 +289,7 @@ export function AddAlertModal({
             Cancel
           </Button>
           <Button type="submit" variant="primary" loading={submitting} className="flex-1">
-            {alertType === 'lost_found' ? 'Post' : 'Post Alert'}
+            {advisory ? 'Post Advisory' : alertType === 'lost_found' ? 'Post' : 'Post Alert'}
           </Button>
         </div>
       </form>

@@ -1,12 +1,13 @@
 'use client'
 
 import { useState } from 'react'
-import { Plus, X, AlertTriangle, ShieldAlert, FileWarning, Search } from 'lucide-react'
+import { Plus, X, AlertTriangle, ShieldAlert, FileWarning, Search, Siren } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useAuth } from '@/contexts/AuthContext'
 import type { AlertType } from '@/types'
 
 interface AddAlertFABProps {
-  onSelect: (type: AlertType) => void
+  onSelect: (type: AlertType, advisory?: boolean) => void
   disabled?: boolean
 }
 
@@ -23,12 +24,21 @@ const ALERT_OPTIONS: {
   { type: 'lost_found', label: 'Lost & Found', icon: <Search size={18} />, color: 'text-lostfound-light', bgColor: 'bg-lostfound-bg border-lostfound-border' },
 ]
 
+// Mods get a fifth option: a longer-lived LEO alert that stays pinned to the map
+const ADVISORY_OPTION = {
+  label: 'Advisory',
+  icon: <Siren size={18} />,
+  color: 'text-event-light',
+  bgColor: 'bg-event-bg border-event-border',
+}
+
 export function AddAlertFAB({ onSelect, disabled }: AddAlertFABProps) {
   const [open, setOpen] = useState(false)
+  const { isMod } = useAuth()
 
-  const handleSelect = (type: AlertType) => {
+  const handleSelect = (type: AlertType, advisory = false) => {
     setOpen(false)
-    onSelect(type)
+    onSelect(type, advisory)
   }
 
   return (
@@ -36,6 +46,20 @@ export function AddAlertFAB({ onSelect, disabled }: AddAlertFABProps) {
       {/* Options */}
       {open && (
         <div className="flex flex-col items-end gap-2 animate-slide-up">
+          {isMod && (
+            <button
+              onClick={() => handleSelect('leo', true)}
+              className={cn(
+                'flex items-center gap-3 px-4 py-2.5 rounded-2xl border',
+                'text-sm font-medium shadow-modal backdrop-blur-sm',
+                ADVISORY_OPTION.bgColor, ADVISORY_OPTION.color,
+                'hover:scale-[1.02] active:scale-[0.98] transition-transform',
+              )}
+            >
+              {ADVISORY_OPTION.label}
+              <span className={ADVISORY_OPTION.color}>{ADVISORY_OPTION.icon}</span>
+            </button>
+          )}
           {ALERT_OPTIONS.map(opt => (
             <button
               key={opt.type}

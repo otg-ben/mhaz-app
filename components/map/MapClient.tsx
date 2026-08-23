@@ -124,6 +124,7 @@ export default function MapClient({
           lat={alert.lat}
           lng={alert.long}
           type="leo"
+          advisory={alert.is_advisory === true}
           highlighted={highlightedId === alert.id}
           onClick={() => setPopupInfo({ type: 'leo', data: alert, lat: alert.lat, lng: alert.long })}
         />
@@ -229,11 +230,13 @@ interface AlertMarkerProps {
   onClick: () => void
   highlighted?: boolean
   resolved?: boolean
+  advisory?: boolean
 }
 
-function AlertMarker({ lat, lng, type, onClick, highlighted, resolved }: AlertMarkerProps) {
+function AlertMarker({ lat, lng, type, onClick, highlighted, resolved, advisory }: AlertMarkerProps) {
   const config = ALERT_TYPE_CONFIG[type]
-  const color = resolved ? '#6e7681' : config.pinColor
+  // Advisories get their own colour and a pulsing ring so they read as standing warnings
+  const color = advisory ? '#fb923c' : resolved ? '#6e7681' : config.pinColor
 
   return (
     <Marker
@@ -244,9 +247,15 @@ function AlertMarker({ lat, lng, type, onClick, highlighted, resolved }: AlertMa
     >
       <div
         className="relative cursor-pointer transition-transform hover:scale-110"
-        style={{ filter: highlighted ? `drop-shadow(0 0 8px ${color})` : undefined }}
+        style={{ filter: highlighted || advisory ? `drop-shadow(0 0 8px ${color})` : undefined }}
       >
-        <svg width="28" height="36" viewBox="0 0 28 36" fill="none">
+        {advisory && (
+          <span
+            className="absolute left-1/2 top-[10px] -translate-x-1/2 -translate-y-1/2 w-9 h-9 rounded-full animate-ping"
+            style={{ backgroundColor: color, opacity: 0.35 }}
+          />
+        )}
+        <svg width="28" height="36" viewBox="0 0 28 36" fill="none" className="relative">
           <path
             d="M14 0C6.268 0 0 6.268 0 14c0 9.333 14 22 14 22S28 23.333 28 14C28 6.268 21.732 0 14 0z"
             fill={color}
@@ -255,7 +264,7 @@ function AlertMarker({ lat, lng, type, onClick, highlighted, resolved }: AlertMa
           <circle cx="14" cy="14" r="6" fill="white" opacity="0.9" />
         </svg>
         <span className="absolute top-[6px] left-0 right-0 text-center text-[11px] leading-none">
-          {config.icon}
+          {advisory ? '⚠️' : config.icon}
         </span>
       </div>
     </Marker>

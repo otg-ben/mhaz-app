@@ -2,7 +2,7 @@ import { cn } from '@/lib/utils'
 import type { AlertType } from '@/types'
 
 interface BadgeProps {
-  type: AlertType | 'mhaz' | 'resolved'
+  type: AlertType | 'mhaz' | 'resolved' | 'advisory'
   label?: string
   className?: string
 }
@@ -13,6 +13,7 @@ const TYPE_STYLES: Record<string, string> = {
   citation: 'bg-citation-bg border-citation-border text-citation',
   lost_found: 'bg-lostfound-bg border-lostfound-border text-lostfound',
   mhaz: 'bg-mhaz-bg border-mhaz-border text-mhaz',
+  advisory: 'bg-event-bg border-event-border text-event-light',
   resolved: 'bg-brand-muted border-brand text-brand',
 }
 
@@ -22,6 +23,7 @@ const TYPE_LABELS: Record<string, string> = {
   citation: 'Citation',
   lost_found: 'Lost & Found',
   mhaz: 'MHAZ',
+  advisory: 'Advisory',
   resolved: 'Resolved',
 }
 

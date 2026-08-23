@@ -45,6 +45,8 @@ export default function HomePage() {
   const [addAlertType, setAddAlertType] = useState<AlertType | null>(null)
   const [pendingPin, setPendingPin] = useState<{ lat: number; lng: number } | null>(null)
   const [placingPinFor, setPlacingPinFor] = useState<AlertType | null>(null)
+  const [placingAdvisory, setPlacingAdvisory] = useState(false)
+  const [addAdvisory, setAddAdvisory] = useState(false)
   const [initialPinPos, setInitialPinPos] = useState<{ lat: number; lng: number } | null>(null)
   const [communityKey, setCommunityKey] = useState(0)
   const [selectedEvent, setSelectedEvent] = useState<EventPost | null>(null)
@@ -75,11 +77,13 @@ export default function HomePage() {
   // Lost & found is posted straight from the Community tab — no pin required
   const handleCreateLostFound = useCallback(() => {
     setPendingPin(null)
+    setAddAdvisory(false)
     setAddAlertType('lost_found')
   }, [])
 
-  const handleFABSelect = (type: AlertType) => {
+  const handleFABSelect = (type: AlertType, advisory = false) => {
     setPlacingPinFor(type)
+    setPlacingAdvisory(advisory)
     setActiveView('map')
 
     // Jump to user's current location and pre-place the pin there
@@ -103,12 +107,14 @@ export default function HomePage() {
     }
     setPendingPin({ lat, lng })
     setAddAlertType(placingPinFor)
+    setAddAdvisory(placingAdvisory)
     setPlacingPinFor(null)
-  }, [placingPinFor, toast])
+  }, [placingPinFor, placingAdvisory, toast])
 
   const handleAddSuccess = () => {
     setPendingPin(null)
     setAddAlertType(null)
+    setAddAdvisory(false)
     setInitialPinPos(null)
     setCommunityKey(k => k + 1)
     refreshAll()
@@ -167,7 +173,7 @@ export default function HomePage() {
               onAlertClick={(type, data) => setSelectedAlert({ type, data })}
               placingPin={!!placingPinFor}
               onPinPlaced={handlePinPlaced}
-              onCancelPin={() => { setPlacingPinFor(null); setInitialPinPos(null) }}
+              onCancelPin={() => { setPlacingPinFor(null); setPlacingAdvisory(false); setInitialPinPos(null) }}
               initialPinPos={initialPinPos}
               highlightedId={highlightedId}
               mapStyle={mapStyle}
@@ -268,8 +274,9 @@ export default function HomePage() {
 
       <AddAlertModal
         open={!!addAlertType && (!!pendingPin || addAlertType === 'lost_found')}
-        onClose={() => { setAddAlertType(null); setPendingPin(null) }}
+        onClose={() => { setAddAlertType(null); setPendingPin(null); setAddAdvisory(false) }}
         alertType={addAlertType}
+        advisory={addAdvisory}
         lat={pendingPin?.lat ?? null}
         lng={pendingPin?.lng ?? null}
         onSuccess={handleAddSuccess}

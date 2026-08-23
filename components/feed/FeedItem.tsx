@@ -48,7 +48,7 @@ export function FeedItem({ type, data, onClick, onShowOnMap, commentCount = 0 }:
       <div className="flex items-start gap-3">
         {/* Left: type indicator */}
         <div className="flex-shrink-0 mt-0.5">
-          <Badge type={type} />
+          <Badge type={(data as LeoAlert).is_advisory ? 'advisory' : type} />
         </div>
 
         {/* Main content */}

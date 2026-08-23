@@ -139,6 +139,7 @@ export interface LeoAlert {
   expires_at: string
   // Joined
   user?: Pick<UserProfile, 'handle'>
+  is_advisory?: boolean
 }
 
 export interface TrailAlert {

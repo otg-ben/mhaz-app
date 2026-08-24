@@ -224,7 +224,7 @@ function PendingPin() {
 
 /** Solid-black source art, tinted at render time via CSS mask. */
 const PIN_ICONS: Record<string, string> = {
-  trail: '/icons/trail.png',
+  trail: '/icons/shovel.png',
   leo: '/icons/leo.png',
   citation: '/icons/citation.png',
   advisory: '/icons/alert.png',

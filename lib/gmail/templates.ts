@@ -45,7 +45,7 @@ function photoBlock(photos?: string[] | null) {
   return ['Photos:', ...photos.map(p => `  ${p}`), ''].join('\n')
 }
 
-const FOOTER = '--\nPosted from the MHAZ app · reply to the list to discuss'
+const FOOTER = '--\nPosted from the MHAZ app'
 
 /**
  * Joins sections, keeping deliberate blank lines but collapsing the gaps left

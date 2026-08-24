@@ -279,7 +279,7 @@ function AlertMarker({ lat, lng, type, onClick, highlighted, resolved, advisory 
             aria-hidden
             className={cn(
               'absolute left-1/2 -translate-x-1/2',
-              advisory ? 'top-[10px] w-[15px] h-[15px]' : 'top-[8px] w-[12px] h-[12px]',
+              advisory ? 'top-[10px] w-[15px] h-[15px]' : 'top-[8px] w-[13.2px] h-[13.2px]',
             )}
             style={{
               // Masking rather than <img> lets one black source render in any

@@ -93,8 +93,8 @@ export function MapView({
     <div className="relative w-full h-full">
       <MapClient
         leoAlerts={
-          // Advisories are standing warnings — they ignore the type filter too,
-          // not just the time range
+          // Advisories are standing warnings: always on the map, whatever the
+          // pills say. Their pill only governs the feed.
           activeTypes.has('leo') ? leoAlerts : leoAlerts.filter(a => a.is_advisory)
         }
         trailAlerts={activeTypes.has('trail') ? trailAlerts : []}

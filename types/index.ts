@@ -95,8 +95,9 @@ export interface EventPost {
 
 export type EventScope = 'upcoming' | 'past'
 
-// MHAZ list emails share the alert feed's filter bar without being an alert
-export type FeedFilterType = AlertType | 'mhaz'
+// The feed's filter bar carries two pills that aren't alert tables of their
+// own: MHAZ list email, and advisories (a flagged subset of leo_alerts).
+export type FeedFilterType = AlertType | 'mhaz' | 'advisory'
 
 export type ActiveView = 'map' | 'feed' | 'community' | 'dms'
 export type CommunityTab = 'lost_found' | 'events'

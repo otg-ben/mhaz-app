@@ -20,8 +20,10 @@ type UnifiedItem =
   | { _type: 'citation';   data: Citation }
   | { _type: 'lost_found'; data: LostFoundPost }
   | { _type: 'mhaz';       data: MhazEmail }
+  | { _type: 'advisory';   data: LeoAlert }
 
 const TYPE_FILTERS: { type: FeedFilterType; label: string; on: string; off: string }[] = [
+  { type: 'advisory',   label: 'Advisory',     on: 'bg-event-bg border-event-border text-event-light',        off: 'bg-elevated border-border text-muted' },
   { type: 'trail',      label: 'Trail',        on: 'bg-trail-bg border-trail-border text-trail-light',          off: 'bg-elevated border-border text-muted' },
   { type: 'leo',        label: 'LEO',          on: 'bg-leo-bg border-leo-border text-leo-light',                off: 'bg-elevated border-border text-muted' },
   { type: 'citation',   label: 'Citations',    on: 'bg-citation-bg border-citation-border text-citation-light', off: 'bg-elevated border-border text-muted' },
@@ -59,7 +61,8 @@ export function FeedView({
   onShowOnMap,
 }: FeedViewProps) {
   const { data: leoData,   isLoading: l1, mutate: m1 } = useSWR<{ data: LeoAlert[] }>(
-    activeTypes.has('leo')        ? `/api/alerts/leo?range=${timeRange}` : null, fetcher)
+    activeTypes.has('leo') || activeTypes.has('advisory')
+      ? `/api/alerts/leo?range=${timeRange}` : null, fetcher)
   const { data: trailData, isLoading: l2, mutate: m2 } = useSWR<{ data: TrailAlert[] }>(
     activeTypes.has('trail')      ? `/api/alerts/trail?range=${timeRange}&resolved=${showResolved}` : null, fetcher)
   const { data: citData,   isLoading: l3, mutate: m3 } = useSWR<{ data: Citation[] }>(
@@ -76,7 +79,9 @@ export function FeedView({
 
   const items = useMemo<UnifiedItem[]>(() => {
     const all: UnifiedItem[] = [
-      ...(leoData?.data   ?? []).map(d => ({ _type: 'leo'        as const, data: d })),
+      ...(leoData?.data ?? [])
+        .filter(d => d.is_advisory ? activeTypes.has('advisory') : activeTypes.has('leo'))
+        .map(d => ({ _type: (d.is_advisory ? 'advisory' : 'leo') as 'advisory' | 'leo', data: d })),
       ...(trailData?.data  ?? []).map(d => ({ _type: 'trail'     as const, data: d })),
       ...(citData?.data    ?? []).map(d => ({ _type: 'citation'  as const, data: d })),
       ...(mhazData?.data   ?? []).map(d => ({ _type: 'mhaz'      as const, data: d })),
@@ -85,12 +90,11 @@ export function FeedView({
     const at = (i: UnifiedItem) =>
       new Date(i._type === 'mhaz' ? i.data.received_at : i.data.created_at).getTime()
 
-    // Active advisories are standing warnings — pin them above the timeline
-    const pinned = (i: UnifiedItem) =>
-      i._type === 'leo' && i.data.is_advisory === true ? 1 : 0
+    // Advisories are standing warnings — pinned above the timeline, newest first
+    const pinned = (i: UnifiedItem) => (i._type === 'advisory' ? 1 : 0)
 
     return all.sort((a, b) => (pinned(b) - pinned(a)) || (at(b) - at(a)))
-  }, [leoData, trailData, citData, mhazData])
+  }, [leoData, trailData, citData, mhazData, activeTypes])
 
   return (
     <div className="flex flex-col h-full">
@@ -176,18 +180,23 @@ export function FeedView({
               email={item.data}
               onClick={() => setSelectedEmail(item.data)}
             />
-          ) : (
-            <FeedItem
-              key={`${item._type}-${item.data.id}`}
-              type={item._type}
-              data={item.data}
-              onClick={() => onAlertClick(item._type, item.data)}
-              onShowOnMap={() => {
-                const coords = getMapCoords(item._type, item.data)
-                onShowOnMap(item.data.id, coords?.lat, coords?.lng)
-              }}
-            />
-          ))
+          ) : (() => {
+            // Advisories are a flagged subset of leo_alerts; downstream code
+            // (detail modal, map jump) still treats them as 'leo'
+            const alertType: AlertType = item._type === 'advisory' ? 'leo' : item._type
+            return (
+              <FeedItem
+                key={`${item._type}-${item.data.id}`}
+                type={alertType}
+                data={item.data}
+                onClick={() => onAlertClick(alertType, item.data)}
+                onShowOnMap={() => {
+                  const coords = getMapCoords(alertType, item.data)
+                  onShowOnMap(item.data.id, coords?.lat, coords?.lng)
+                }}
+              />
+            )
+          })())
         )}
       </div>
 

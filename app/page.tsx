@@ -26,7 +26,7 @@ import { cn } from '@/lib/utils'
 
 const fetcher = (url: string) => fetch(url).then(r => r.json())
 
-const ALL_TYPES = new Set<FeedFilterType>(['leo', 'trail', 'citation', 'mhaz'])
+const ALL_TYPES = new Set<FeedFilterType>(['advisory', 'leo', 'trail', 'citation', 'mhaz'])
 
 export default function HomePage() {
   const { user, profile, isApproved, loading: authLoading } = useAuth()

@@ -12,7 +12,7 @@ import {
 } from '@/lib/mapbox/bounds'
 import { ALERT_TYPE_CONFIG } from '@/lib/utils'
 import type { LeoAlert, TrailAlert, Citation, LostFoundPost, AlertType } from '@/types'
-import { timeAgo, LEO_AGENCY_LABELS, TRAIL_ISSUE_LABELS } from '@/lib/utils'
+import { timeAgo, cn, LEO_AGENCY_LABELS, TRAIL_ISSUE_LABELS } from '@/lib/utils'
 import { Badge } from '@/components/ui/Badge'
 
 interface MapClientProps {
@@ -222,6 +222,14 @@ function PendingPin() {
 
 // ─── Alert Marker ─────────────────────────────────────────────────────────────
 
+/** Solid-black source art, tinted at render time via CSS mask. */
+const PIN_ICONS: Record<string, string> = {
+  trail: '/icons/trail.png',
+  leo: '/icons/leo.png',
+  citation: '/icons/citation.png',
+  advisory: '/icons/alert.png',
+}
+
 interface AlertMarkerProps {
   id: string
   lat: number
@@ -235,8 +243,11 @@ interface AlertMarkerProps {
 
 function AlertMarker({ lat, lng, type, onClick, highlighted, resolved, advisory }: AlertMarkerProps) {
   const config = ALERT_TYPE_CONFIG[type]
-  // Advisories get their own colour and a pulsing ring so they read as standing warnings
-  const color = advisory ? '#fb923c' : resolved ? '#6e7681' : config.pinColor
+  // Advisories share the red family with citations but run brighter, and keep
+  // the pulse and larger pin so they still outrank everything else on the map
+  const color = advisory ? '#ff1f3d' : resolved ? '#6e7681' : config.pinColor
+  const size = advisory ? { w: 36, h: 46 } : { w: 28, h: 36 }
+  const icon = advisory ? PIN_ICONS.advisory : PIN_ICONS[type]
 
   return (
     <Marker
@@ -251,21 +262,40 @@ function AlertMarker({ lat, lng, type, onClick, highlighted, resolved, advisory 
       >
         {advisory && (
           <span
-            className="absolute left-1/2 top-[10px] -translate-x-1/2 -translate-y-1/2 w-9 h-9 rounded-full animate-ping"
-            style={{ backgroundColor: color, opacity: 0.35 }}
+            className="absolute left-1/2 top-[13px] -translate-x-1/2 -translate-y-1/2 w-11 h-11 rounded-full animate-ping"
+            style={{ backgroundColor: color, opacity: 0.4 }}
           />
         )}
-        <svg width="28" height="36" viewBox="0 0 28 36" fill="none" className="relative">
+        <svg width={size.w} height={size.h} viewBox="0 0 28 36" fill="none" className="relative">
           <path
             d="M14 0C6.268 0 0 6.268 0 14c0 9.333 14 22 14 22S28 23.333 28 14C28 6.268 21.732 0 14 0z"
             fill={color}
             opacity={resolved ? 0.5 : 1}
           />
-          <circle cx="14" cy="14" r="6" fill="white" opacity="0.9" />
+
         </svg>
-        <span className="absolute top-[6px] left-0 right-0 text-center text-[11px] leading-none">
-          {advisory ? '⚠️' : config.icon}
-        </span>
+        {icon && (
+          <span
+            aria-hidden
+            className={cn(
+              'absolute left-1/2 -translate-x-1/2',
+              advisory ? 'top-[10px] w-[15px] h-[15px]' : 'top-[8px] w-[12px] h-[12px]',
+            )}
+            style={{
+              // Masking rather than <img> lets one black source render in any
+              // colour — white inside the pin, grey once resolved
+              backgroundColor: resolved ? '#c9d1d9' : '#ffffff',
+              WebkitMaskImage: `url(${icon})`,
+              maskImage: `url(${icon})`,
+              WebkitMaskRepeat: 'no-repeat',
+              maskRepeat: 'no-repeat',
+              WebkitMaskSize: 'contain',
+              maskSize: 'contain',
+              WebkitMaskPosition: 'center',
+              maskPosition: 'center',
+            }}
+          />
+        )}
       </div>
     </Marker>
   )

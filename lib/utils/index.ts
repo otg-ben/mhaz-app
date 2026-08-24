@@ -56,7 +56,7 @@ export const ALERT_TYPE_CONFIG: Record<AlertType, {
     color: 'text-citation',
     bgColor: 'bg-citation-bg',
     borderColor: 'border-citation-border',
-    pinColor: '#ff5f57',
+    pinColor: '#dc2626',
     icon: '📋',
   },
   lost_found: {

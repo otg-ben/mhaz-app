@@ -25,7 +25,7 @@ interface AlertDetailModalProps {
 }
 
 export function AlertDetailModal({ open, onClose, type, data, onUpdate, onGoToMap, onMessageUser }: AlertDetailModalProps) {
-  const { user } = useAuth()
+  const { user, isMod } = useAuth()
   const { toast } = useToast()
   const [resolveLoading, setResolveLoading] = useState(false)
   const [deleteLoading, setDeleteLoading] = useState(false)
@@ -50,11 +50,12 @@ export function AlertDetailModal({ open, onClose, type, data, onUpdate, onGoToMa
     setResolveLoading(true)
     try {
       const endpoint =
+        isAdvisory ? `/api/alerts/leo/${data.id}/resolve` :
         type === 'trail' ? `/api/alerts/trail/${data.id}/resolve` :
         `/api/lost-found/${data.id}/resolve`
       const res = await fetch(endpoint, { method: 'PATCH' })
       if (!res.ok) throw new Error()
-      toast('Marked as resolved', 'success')
+      toast(isAdvisory ? 'Advisory ended' : 'Marked as resolved', 'success')
       onUpdate()
       onClose()
     } catch {
@@ -97,9 +98,12 @@ export function AlertDetailModal({ open, onClose, type, data, onUpdate, onGoToMa
     (type === 'trail' && (data as TrailAlert).status === 'resolved') ||
     (type === 'lost_found' && (data as LostFoundPost).status === 'resolved')
 
-  // Trail issues are community-resolvable; lost & found is the poster's call only
+  const isAdvisory = type === 'leo' && (data as LeoAlert).is_advisory === true
+
+  // Trail issues are community-resolvable; lost & found is the poster's call
+  // only; advisories are mod-only
   const canResolve = user && !isResolved && (
-    type === 'trail' || (type === 'lost_found' && isOwner)
+    type === 'trail' || (type === 'lost_found' && isOwner) || (isAdvisory && isMod)
   )
 
   const hasCoords = type !== 'lost_found' || (data as LostFoundPost).lat != null
@@ -119,7 +123,7 @@ export function AlertDetailModal({ open, onClose, type, data, onUpdate, onGoToMa
         <div className="flex items-start justify-between gap-4">
           <div className="flex-1 min-w-0">
             <div className="flex flex-wrap items-center gap-2 mb-2">
-              <Badge type={type} />
+              <Badge type={(data as LeoAlert).is_advisory ? 'advisory' : type} />
               {(data as LeoAlert).source === 'mhaz' && <Badge type="mhaz" />}
               {isResolved && <Badge type="resolved" />}
             </div>
@@ -247,9 +251,10 @@ export function AlertDetailModal({ open, onClose, type, data, onUpdate, onGoToMa
                 className="flex-1"
               >
                 <CheckCircle2 size={14} />
-                {type === 'lost_found'
-                  ? ((data as LostFoundPost).type === 'lost' ? 'Mark Recovered' : 'Mark Claimed')
-                  : 'Mark Resolved'}
+                {isAdvisory ? 'End Advisory'
+                  : type === 'lost_found'
+                    ? ((data as LostFoundPost).type === 'lost' ? 'Mark Recovered' : 'Mark Claimed')
+                    : 'Mark Resolved'}
               </Button>
             )}
             {canEdit && (

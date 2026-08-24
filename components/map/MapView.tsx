@@ -92,7 +92,11 @@ export function MapView({
   return (
     <div className="relative w-full h-full">
       <MapClient
-        leoAlerts={activeTypes.has('leo') ? leoAlerts : []}
+        leoAlerts={
+          // Advisories are standing warnings — they ignore the type filter too,
+          // not just the time range
+          activeTypes.has('leo') ? leoAlerts : leoAlerts.filter(a => a.is_advisory)
+        }
         trailAlerts={activeTypes.has('trail') ? trailAlerts : []}
         citations={activeTypes.has('citation') ? citations : []}
         onAlertClick={onAlertClick}

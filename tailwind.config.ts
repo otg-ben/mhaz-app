@@ -39,7 +39,7 @@ const config: Config = {
           light: '#f87171',
           bg: '#2d0000',
           border: '#991b1b',
-          pin: '#ff5f57',
+          pin: '#dc2626',
         },
         lostfound: {
           DEFAULT: '#22c55e',
@@ -49,11 +49,11 @@ const config: Config = {
           pin: '#4ade80',
         },
         event: {
-          DEFAULT: '#f97316',
-          light: '#fb923c',
-          bg: '#331303',
-          border: '#c2410c',
-          pin: '#fb923c',
+          DEFAULT: '#ff1f3d',
+          light: '#ff5470',
+          bg: '#3d0410',
+          border: '#c81032',
+          pin: '#ff1f3d',
         },
         // Brand
         brand: {

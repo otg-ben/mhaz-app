@@ -31,12 +31,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const supabase = useRef(createClient()).current
 
   const fetchProfile = useCallback(async (userId: string) => {
-    const { data } = await supabase
-      .from('users')
-      .select('*')
-      .eq('id', userId)
-      .single()
-    setProfile(data ?? null)
+    // Bounded so a stalled request can't hold the loading gate open
+    const query = supabase.from('users').select('*').eq('id', userId).single()
+    const timeout = new Promise<null>(resolve => setTimeout(() => resolve(null), 5000))
+
+    try {
+      const result = await Promise.race([query, timeout])
+      if (result && 'data' in result) setProfile(result.data ?? null)
+    } catch {
+      // leave the existing profile in place; the caller still settles
+    }
   }, [supabase])
 
   const refreshProfile = useCallback(async () => {
@@ -67,37 +71,44 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       window.history.replaceState(null, '', window.location.pathname + window.location.search)
     }
 
-    // Fallback: if auth doesn't resolve in 6s, clear the spinner anyway
+    // Safety net: show the app even if auth never resolves. It is cleared only
+    // once loading is actually false — clearing it before awaiting the profile
+    // fetch left a slow query able to spin forever with nothing to rescue it.
     const fallback = setTimeout(() => {
       if (mounted) setLoading(false)
     }, 6000)
 
+    const settle = () => {
+      if (!mounted) return
+      clearTimeout(fallback)
+      setLoading(false)
+    }
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (_event, session) => {
         if (!mounted) return
-        clearTimeout(fallback)
         setSession(session)
         setUser(session?.user ?? null)
-        if (session?.user) {
-          await fetchProfile(session.user.id)
-        } else {
-          setProfile(null)
+        try {
+          if (session?.user) {
+            await fetchProfile(session.user.id)
+          } else {
+            setProfile(null)
+          }
+        } finally {
+          settle()
         }
-        setLoading(false)
       }
     )
 
     // Also try getSession directly — whichever resolves first wins
     consumeUrlHash().then(() => supabase.auth.getSession()).then(({ data: { session } }) => {
       if (!mounted) return
-      clearTimeout(fallback)
       setSession(session)
       setUser(session?.user ?? null)
       if (session?.user) fetchProfile(session.user.id)
-      setLoading(false)
-    }).catch(() => {
-      if (mounted) setLoading(false)
-    })
+      settle()
+    }).catch(settle)
 
     return () => {
       mounted = false

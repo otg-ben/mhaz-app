@@ -6,6 +6,7 @@ import { ArrowLeft, Send, Trash2 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useToast } from '@/contexts/ToastContext'
 import { PhotoViewer } from '@/components/ui/PhotoViewer'
+import { Button } from '@/components/ui/Button'
 import { ReactionBar } from './ReactionBar'
 import { timeAgo } from '@/lib/utils'
 import type { Discussion } from '@/types'
@@ -25,10 +26,16 @@ export function DiscussionDetail({ id, onBack, onDeleted }: DiscussionDetailProp
   const [sending, setSending] = useState(false)
   const [viewer, setViewer] = useState<number | null>(null)
 
-  const { data, mutate } = useSWR<{ data: Discussion }>(`/api/discussions/${id}`, fetcher, {
-    refreshInterval: 20000,
-  })
+  const { data, mutate } = useSWR<{ data: Discussion; error?: string }>(
+    `/api/discussions/${id}`, fetcher,
+    {
+      // Stop polling once the thread is gone, or a reader left on a deleted
+      // thread would 404 in a loop forever
+      refreshInterval: latest => (latest?.data ? 20000 : 0),
+    },
+  )
   const thread = data?.data
+  const missing = !!data && !data.data
 
   const reply = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -60,6 +67,15 @@ export function DiscussionDetail({ id, onBack, onDeleted }: DiscussionDetailProp
     } catch (err) {
       toast(err instanceof Error ? err.message : 'Failed to delete', 'error')
     }
+  }
+
+  if (missing) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full bg-base px-8 text-center gap-3">
+        <p className="text-secondary text-sm">This thread was deleted.</p>
+        <Button variant="secondary" size="sm" onClick={onBack}>Back to discussions</Button>
+      </div>
+    )
   }
 
   if (!thread) {

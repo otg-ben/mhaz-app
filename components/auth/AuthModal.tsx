@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { MailCheck } from 'lucide-react'
 import { Modal } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
 import { useAuth } from '@/contexts/AuthContext'
@@ -17,6 +18,9 @@ export function AuthModal({ open, onClose, defaultMode = 'login' }: AuthModalPro
   const { signIn, signUp, resetPassword } = useAuth()
   const { toast } = useToast()
   const [mode, setMode] = useState<'login' | 'register' | 'forgot'>(defaultMode)
+  // Signup ends on a confirmation screen rather than closing — otherwise
+  // nothing tells the new rider an email is waiting for them
+  const [signedUpEmail, setSignedUpEmail] = useState<string | null>(null)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [handle, setHandle] = useState('')
@@ -47,11 +51,58 @@ export function AuthModal({ open, onClose, defaultMode = 'login' }: AuthModalPro
         return
       }
 
-      toast(mode === 'login' ? 'Welcome back!' : 'Account created!', 'success')
+      if (mode === 'register') {
+        setSignedUpEmail(email)
+        return
+      }
+
+      toast('Welcome back!', 'success')
       onClose()
     } finally {
       setLoading(false)
     }
+  }
+
+  if (signedUpEmail) {
+    return (
+      <Modal open={open} onClose={onClose} size="sm">
+        <div className="px-5 py-7 text-center">
+          <div className="w-14 h-14 rounded-2xl bg-brand-muted border border-brand flex items-center justify-center mx-auto mb-4">
+            <MailCheck size={26} className="text-brand" />
+          </div>
+
+          <h2 className="text-lg font-bold text-primary mb-1.5">Check your email</h2>
+          <p className="text-sm text-secondary leading-relaxed mb-4">
+            We sent a confirmation link to<br />
+            <span className="text-primary font-medium break-all">{signedUpEmail}</span>
+          </p>
+
+          <div className="text-left rounded-xl bg-surface border border-border p-3.5 mb-5 space-y-2">
+            <p className="text-xs text-secondary leading-relaxed">
+              Look for an email from{' '}
+              <span className="text-primary font-medium">mhazapp@gmail.com</span>. Click the link
+              inside to confirm your address.
+            </p>
+            <p className="text-xs text-secondary leading-relaxed">
+              <span className="text-primary font-medium">Not there?</span> Check your spam or
+              promotions folder — it often lands there the first time.
+            </p>
+            <p className="text-xs text-secondary leading-relaxed">
+              After confirming, an admin approves your account before you can get in. You&apos;ll
+              hear from us once that&apos;s done.
+            </p>
+          </div>
+
+          <Button
+            variant="primary"
+            className="w-full"
+            onClick={() => { setSignedUpEmail(null); setMode('login'); onClose() }}
+          >
+            Got it
+          </Button>
+        </div>
+      </Modal>
+    )
   }
 
   return (

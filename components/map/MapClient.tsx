@@ -326,7 +326,7 @@ function PopupCard({
       onClick={onViewDetail}
     >
       <div className="flex items-center gap-2 mb-2">
-        <Badge type={type} />
+        <Badge type={type === 'leo' && (data as LeoAlert).is_advisory ? 'advisory' : type} />
         {type === 'trail' && (data as TrailAlert).status === 'resolved' && (
           <Badge type="resolved" />
         )}

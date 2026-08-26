@@ -46,8 +46,8 @@ export async function POST(req: NextRequest) {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-  const { data: profile } = await supabase.from('users').select('handle').eq('id', user.id).single()
-  await sendAlertEmail({ type: 'citation', data, handle: profile?.handle ?? 'a rider' }, data.id)
+  const { data: profile } = await supabase.from('users').select('email').eq('id', user.id).single()
+  await sendAlertEmail({ type: 'citation', data, reporter: profile?.email ?? user.email ?? 'a rider' }, data.id)
 
   return NextResponse.json({ data }, { status: 201 })
 }

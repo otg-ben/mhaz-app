@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { cn } from '@/lib/utils'
 import { LostFoundFeed } from './LostFoundFeed'
 import { EventsFeed } from '@/components/events/EventsFeed'
+import { DiscussionFeed } from '@/components/discussion/DiscussionFeed'
 import type { CommunityTab, LostFoundPost, EventPost } from '@/types'
 
 interface CommunityViewProps {
@@ -24,13 +25,14 @@ export function CommunityView({
       <div className="flex gap-2 px-4 pt-3 pb-2 bg-surface border-b border-border">
         {([
           { key: 'lost_found' as const, label: 'Lost & Found' },
-          { key: 'events' as const, label: 'Rides & Events' },
+          { key: 'events' as const, label: 'Rides' },
+          { key: 'discussion' as const, label: 'Discussion' },
         ]).map(t => (
           <button
             key={t.key}
             onClick={() => setTab(t.key)}
             className={cn(
-              'flex-1 px-3 py-2 rounded-xl text-xs font-semibold transition-colors',
+              'flex-1 px-2.5 py-2 rounded-xl text-[11px] font-semibold transition-colors',
               tab === t.key
                 ? 'bg-brand text-base'
                 : 'bg-elevated border border-border text-secondary hover:text-primary',
@@ -48,8 +50,10 @@ export function CommunityView({
             onCreate={onCreateLostFound}
             refreshKey={refreshKey}
           />
-        ) : (
+        ) : tab === 'events' ? (
           <EventsFeed onEventClick={onEventClick} refreshKey={refreshKey} />
+        ) : (
+          <DiscussionFeed />
         )}
       </div>
     </div>

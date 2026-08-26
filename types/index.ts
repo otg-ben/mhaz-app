@@ -64,6 +64,42 @@ export interface DMConversation {
   unread: number
 }
 
+export const REACTION_EMOJIS = ['👍', '🔥', '😂', '👀', '❤️'] as const
+export type ReactionEmoji = typeof REACTION_EMOJIS[number]
+
+export interface Reaction {
+  id: string
+  user_id: string
+  target_type: 'discussion' | 'reply'
+  target_id: string
+  emoji: ReactionEmoji
+}
+
+export interface DiscussionReply {
+  id: string
+  discussion_id: string
+  user_id: string
+  body: string
+  created_at: string
+  user?: Pick<UserProfile, 'handle'>
+  reactions?: Reaction[]
+}
+
+export interface Discussion {
+  id: string
+  user_id: string
+  title: string | null
+  body: string
+  photos: string[]
+  last_active_at: string
+  created_at: string
+  updated_at: string
+  user?: Pick<UserProfile, 'handle'>
+  replies?: DiscussionReply[]
+  reactions?: Reaction[]
+  reply_count?: number
+}
+
 export type RsvpStatus = 'going' | 'not_going'
 
 export interface EventRsvp {
@@ -100,7 +136,7 @@ export type EventScope = 'upcoming' | 'past'
 export type FeedFilterType = AlertType | 'mhaz' | 'advisory'
 
 export type ActiveView = 'map' | 'feed' | 'community' | 'dms'
-export type CommunityTab = 'lost_found' | 'events'
+export type CommunityTab = 'lost_found' | 'events' | 'discussion'
 export type LostFoundStatus = 'open' | 'resolved'
 
 export type MhazClassification = 'leo' | 'trail_issue' | 'citation' | 'unclassified'

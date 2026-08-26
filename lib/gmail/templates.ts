@@ -11,10 +11,11 @@ import { LEO_AGENCY_LABELS, TRAIL_ISSUE_LABELS } from '@/lib/utils'
  * These are pure formatters: nothing here can send mail.
  */
 
+/** `reporter` is the poster's email address, shown as the attribution line. */
 export type AlertEmailInput =
-  | { type: 'trail';    data: TrailAlert; handle: string }
-  | { type: 'leo';      data: LeoAlert;   handle: string }
-  | { type: 'citation'; data: Citation;   handle: string }
+  | { type: 'trail';    data: TrailAlert; reporter: string }
+  | { type: 'leo';      data: LeoAlert;   reporter: string }
+  | { type: 'citation'; data: Citation;   reporter: string }
 
 export interface AlertEmail {
   subject: string
@@ -56,7 +57,7 @@ function assemble(parts: string[]) {
 }
 
 export function buildAlertEmail(input: AlertEmailInput): AlertEmail {
-  const { handle } = input
+  const { reporter } = input
 
   if (input.type === 'trail') {
     const a = input.data
@@ -65,7 +66,7 @@ export function buildAlertEmail(input: AlertEmailInput): AlertEmail {
       subject: `Trail Issue: ${issue} — ${truncate(a.description)}`,
       text: assemble([
         `TRAIL ISSUE — ${issue}`,
-        `Reported by @${handle} · ${when(a.created_at)}`,
+        `Reported by ${reporter} · ${when(a.created_at)}`,
         '',
         a.description || '(no description provided)',
         '',
@@ -83,7 +84,7 @@ export function buildAlertEmail(input: AlertEmailInput): AlertEmail {
       subject: `LEO Alert: ${agency} — ${truncate(a.description)}`,
       text: assemble([
         `LEO SIGHTING — ${agency}`,
-        `Reported by @${handle} · ${when(a.created_at)}`,
+        `Reported by ${reporter} · ${when(a.created_at)}`,
         '',
         a.description || '(no description provided)',
         '',
@@ -101,7 +102,7 @@ export function buildAlertEmail(input: AlertEmailInput): AlertEmail {
       `CITATION REPORT — ${agency}`,
       // Incident and report times often differ by a day; conflating them misleads
       `Incident:    ${when(a.incident_date)}`,
-      `Reported by: @${handle} · ${when(a.created_at)}`,
+      `Reported by: ${reporter} · ${when(a.created_at)}`,
       '',
       a.description || '(no description provided)',
       '',

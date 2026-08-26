@@ -66,8 +66,8 @@ export async function POST(req: NextRequest) {
 
   // Advisories are announced in-app, not emailed. Sending never blocks the post.
   if (!advisory) {
-    const { data: profile } = await supabase.from('users').select('handle').eq('id', user.id).single()
-    await sendAlertEmail({ type: 'leo', data, handle: profile?.handle ?? 'a rider' }, data.id)
+    const { data: profile } = await supabase.from('users').select('email').eq('id', user.id).single()
+    await sendAlertEmail({ type: 'leo', data, reporter: profile?.email ?? user.email ?? 'a rider' }, data.id)
   }
 
   return NextResponse.json({ data }, { status: 201 })

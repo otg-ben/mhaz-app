@@ -30,6 +30,9 @@ export function AlertDetailModal({ open, onClose, type, data, onUpdate, onGoToMa
   const [resolveLoading, setResolveLoading] = useState(false)
   const [deleteLoading, setDeleteLoading] = useState(false)
   const [confirmLoading, setConfirmLoading] = useState(false)
+  // The modal renders a snapshot passed down from the list, so a confirmation
+  // made here wouldn't show until it was reopened
+  const [localConfirm, setLocalConfirm] = useState<{ mine: boolean; count: number } | null>(null)
   const [viewerIndex, setViewerIndex] = useState<number | null>(null)
 
   const photos = type === 'trail'
@@ -69,7 +72,9 @@ export function AlertDetailModal({ open, onClose, type, data, onUpdate, onGoToMa
   // "Still there" keeps a persistent hazard fresh: the feed's time window
   // applies to the last confirmation, not the original report date
   const trail = data as TrailAlert
-  const iConfirmed = (trail.confirmations ?? []).some(c => c.user_id === user?.id)
+  const serverMine = (trail.confirmations ?? []).some(c => c.user_id === user?.id)
+  const iConfirmed = localConfirm?.mine ?? serverMine
+  const confirmCount = localConfirm?.count ?? (trail.confirm_count ?? 0)
 
   const handleConfirm = async () => {
     if (!user) { toast('Sign in to confirm', 'info'); return }
@@ -78,6 +83,10 @@ export function AlertDetailModal({ open, onClose, type, data, onUpdate, onGoToMa
       const res = await fetch(`/api/alerts/trail/${data.id}/confirm`, { method: 'POST' })
       const json = await res.json()
       if (!res.ok) throw new Error(json.error)
+      setLocalConfirm({
+        mine: json.confirmed,
+        count: confirmCount + (json.confirmed ? 1 : -1),
+      })
       toast(json.confirmed ? 'Marked still there — thanks' : 'Confirmation withdrawn', 'success')
       onUpdate()
     } catch (e) {
@@ -274,10 +283,10 @@ export function AlertDetailModal({ open, onClose, type, data, onUpdate, onGoToMa
               <Eye size={14} />
               {iConfirmed ? "You marked this still there" : 'Still there'}
             </Button>
-            {(trail.confirm_count ?? 0) > 0 && (
+            {confirmCount > 0 && (
               <p className="text-[11px] text-muted mt-1.5 text-center">
-                {trail.confirm_count} {trail.confirm_count === 1 ? 'rider has' : 'riders have'} confirmed this is
-                still there{trail.last_confirmed_at ? ` · last ${timeAgo(trail.last_confirmed_at)}` : ''}
+                {confirmCount} {confirmCount === 1 ? 'rider has' : 'riders have'} confirmed this is still there
+                {!localConfirm && trail.last_confirmed_at ? ` · last ${timeAgo(trail.last_confirmed_at)}` : ''}
               </p>
             )}
           </div>
@@ -324,7 +333,15 @@ export function AlertDetailModal({ open, onClose, type, data, onUpdate, onGoToMa
           <h3 className="text-sm font-semibold text-secondary uppercase tracking-wide mb-3">
             Comments
           </h3>
-          <CommentThread alertType={type} alertId={data.id} />
+          <CommentThread
+            alertType={type}
+            alertId={data.id}
+            requireTrailStatus={type === 'trail' && !isResolved}
+            onStatusChange={confirmed => {
+              if (confirmed) setLocalConfirm({ mine: true, count: confirmCount + (iConfirmed ? 0 : 1) })
+              onUpdate()
+            }}
+          />
         </div>
       </div>
     </Modal>

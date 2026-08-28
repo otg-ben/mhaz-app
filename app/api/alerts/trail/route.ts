@@ -13,8 +13,10 @@ export async function GET(req: NextRequest) {
 
   let query = supabase
     .from('trail_alerts')
-    .select('*, user:users!trail_alerts_user_id_fkey(handle), resolver:users!trail_alerts_resolved_by_fkey(handle)')
-    .gte('created_at', since)
+    .select('*, user:users!trail_alerts_user_id_fkey(handle), resolver:users!trail_alerts_resolved_by_fkey(handle), confirmations:trail_confirmations(user_id, confirmed_at, user:users(handle))')
+    // A trail issue stays relevant while riders keep confirming it, so the
+    // window applies to the later of reported-or-confirmed, not report date
+    .or(`created_at.gte.${since},last_confirmed_at.gte.${since}`)
     .order('created_at', { ascending: false })
 
   if (!showResolved) {

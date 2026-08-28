@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { MapPin, Clock, User, CheckCircle2, Trash2, Edit2, Navigation, MessageCircle } from 'lucide-react'
+import { MapPin, Clock, User, CheckCircle2, Trash2, Edit2, Navigation, MessageCircle, Eye } from 'lucide-react'
 import { Modal } from '@/components/ui/Modal'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
@@ -9,7 +9,7 @@ import { PhotoViewer } from '@/components/ui/PhotoViewer'
 import { CommentThread } from './CommentThread'
 import { useAuth } from '@/contexts/AuthContext'
 import { useToast } from '@/contexts/ToastContext'
-import { formatDate, LEO_AGENCY_LABELS, TRAIL_ISSUE_LABELS } from '@/lib/utils'
+import { formatDate, timeAgo, LEO_AGENCY_LABELS, TRAIL_ISSUE_LABELS } from '@/lib/utils'
 import { formatCoords } from '@/lib/mapbox/bounds'
 import type { LeoAlert, TrailAlert, Citation, LostFoundPost, AlertType } from '@/types'
 
@@ -29,6 +29,7 @@ export function AlertDetailModal({ open, onClose, type, data, onUpdate, onGoToMa
   const { toast } = useToast()
   const [resolveLoading, setResolveLoading] = useState(false)
   const [deleteLoading, setDeleteLoading] = useState(false)
+  const [confirmLoading, setConfirmLoading] = useState(false)
   const [viewerIndex, setViewerIndex] = useState<number | null>(null)
 
   const photos = type === 'trail'
@@ -62,6 +63,27 @@ export function AlertDetailModal({ open, onClose, type, data, onUpdate, onGoToMa
       toast('Failed to resolve', 'error')
     } finally {
       setResolveLoading(false)
+    }
+  }
+
+  // "Still there" keeps a persistent hazard fresh: the feed's time window
+  // applies to the last confirmation, not the original report date
+  const trail = data as TrailAlert
+  const iConfirmed = (trail.confirmations ?? []).some(c => c.user_id === user?.id)
+
+  const handleConfirm = async () => {
+    if (!user) { toast('Sign in to confirm', 'info'); return }
+    setConfirmLoading(true)
+    try {
+      const res = await fetch(`/api/alerts/trail/${data.id}/confirm`, { method: 'POST' })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error)
+      toast(json.confirmed ? 'Marked still there — thanks' : 'Confirmation withdrawn', 'success')
+      onUpdate()
+    } catch (e) {
+      toast(e instanceof Error ? e.message : 'Failed to confirm', 'error')
+    } finally {
+      setConfirmLoading(false)
     }
   }
 
@@ -238,6 +260,27 @@ export function AlertDetailModal({ open, onClose, type, data, onUpdate, onGoToMa
             <MessageCircle size={14} />
             Message @{(data as LostFoundPost).user?.handle ?? '—'}
           </Button>
+        )}
+
+        {type === 'trail' && !isResolved && (
+          <div className="pt-1">
+            <Button
+              variant={iConfirmed ? 'trail' : 'secondary'}
+              size="sm"
+              className="w-full"
+              loading={confirmLoading}
+              onClick={handleConfirm}
+            >
+              <Eye size={14} />
+              {iConfirmed ? "You marked this still there" : 'Still there'}
+            </Button>
+            {(trail.confirm_count ?? 0) > 0 && (
+              <p className="text-[11px] text-muted mt-1.5 text-center">
+                {trail.confirm_count} {trail.confirm_count === 1 ? 'rider has' : 'riders have'} confirmed this is
+                still there{trail.last_confirmed_at ? ` · last ${timeAgo(trail.last_confirmed_at)}` : ''}
+              </p>
+            )}
+          </div>
         )}
 
         {(canResolve || canEdit) && (

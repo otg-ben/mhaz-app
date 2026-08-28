@@ -182,6 +182,12 @@ export interface LeoAlert {
   is_advisory?: boolean
 }
 
+export interface TrailConfirmation {
+  user_id: string
+  confirmed_at: string
+  user?: Pick<UserProfile, 'handle'>
+}
+
 export interface TrailAlert {
   id: string
   user_id: string
@@ -199,6 +205,9 @@ export interface TrailAlert {
   created_at: string
   updated_at: string
   map_expires_at: string
+  last_confirmed_at?: string | null
+  confirm_count?: number
+  confirmations?: TrailConfirmation[]
   // Joined
   user?: Pick<UserProfile, 'handle'>
   resolver?: Pick<UserProfile, 'handle'>

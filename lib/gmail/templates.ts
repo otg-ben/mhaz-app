@@ -1,6 +1,5 @@
-import { format } from 'date-fns'
 import type { LeoAlert, TrailAlert, Citation } from '@/types'
-import { LEO_AGENCY_LABELS, TRAIL_ISSUE_LABELS } from '@/lib/utils'
+import { LEO_AGENCY_LABELS, TRAIL_ISSUE_LABELS, APP_TIME_ZONE } from '@/lib/utils'
 
 /**
  * Plain-text list emails for user-created alerts.
@@ -22,7 +21,17 @@ export interface AlertEmail {
   text: string
 }
 
-const when = (iso: string) => format(new Date(iso), "MMM d, yyyy 'at' h:mm a")
+// Rendered on Vercel, which runs UTC — without an explicit zone a 2:34 PM
+// Pacific report goes out to the list stamped 9:34 PM
+const when = (iso: string) => {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: APP_TIME_ZONE,
+    month: 'short', day: 'numeric', year: 'numeric',
+    hour: 'numeric', minute: '2-digit',
+  }).formatToParts(new Date(iso))
+  const get = (t: string) => parts.find(p => p.type === t)?.value ?? ''
+  return `${get('month')} ${get('day')}, ${get('year')} at ${get('hour')}:${get('minute')} ${get('dayPeriod')}`
+}
 
 /** Subjects stay scannable in a busy list — one line, no wrapping. */
 function truncate(s: string, max = 55) {

@@ -1,6 +1,6 @@
 import { clsx, type ClassValue } from 'clsx'
 import { twMerge } from 'tailwind-merge'
-import { formatDistanceToNow, format } from 'date-fns'
+import { formatDistanceToNow } from 'date-fns'
 import type { AlertType, LeoAgency, TrailIssueType, TimeRange } from '@/types'
 
 export function cn(...inputs: ClassValue[]) {
@@ -11,8 +11,23 @@ export function timeAgo(date: string): string {
   return formatDistanceToNow(new Date(date), { addSuffix: true })
 }
 
+/**
+ * Marin time, always.
+ *
+ * date-fns formats in whatever zone the runtime happens to be in: the reader's
+ * browser on the client, but UTC on Vercel — which is how an alert posted at
+ * 2:34 PM PT went out to the list stamped 9:34 PM. Pinning the zone also means
+ * a rider checking from out of state still reads trail times in Marin time,
+ * which is the only reading that makes sense for a trail report.
+ */
+export const APP_TIME_ZONE = 'America/Los_Angeles'
+
 export function formatDate(date: string): string {
-  return format(new Date(date), 'MMM d, yyyy h:mm a')
+  return new Intl.DateTimeFormat('en-US', {
+    timeZone: APP_TIME_ZONE,
+    month: 'short', day: 'numeric', year: 'numeric',
+    hour: 'numeric', minute: '2-digit',
+  }).format(new Date(date)).replace(',', '')
 }
 
 export function timeRangeToDate(range: TimeRange): Date {
